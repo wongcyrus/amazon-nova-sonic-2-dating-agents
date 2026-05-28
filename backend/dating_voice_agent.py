@@ -1,5 +1,6 @@
-"""FastAPI server and Strands BidiAgent for the dating game."""
+"""FastAPI server and Strands BidiAgent for the oral-practice game."""
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -18,6 +19,8 @@ from strands.experimental.bidi.types.events import (
     BidiTextInputEvent,
 )
 
+from multi_agent_team import analyze_turn
+from oral_practice import PracticeSession
 from tools import get_all_tools
 
 logging.basicConfig(
@@ -40,17 +43,39 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 COGNITO_REGION = os.environ.get("CognitoRegion", "us-east-1")
 AWS_BEDROCK_REGION = os.environ.get("AWS_BEDROCK_REGION", "us-east-1")
+MULTI_AGENT_MODEL_ID = os.environ.get("MULTI_AGENT_MODEL_ID", "amazon.nova-pro-v1:0")
 VALID_CHARACTERS = {"shizuku", "chitose"}
 
 
+def merge_transcript_chunks(existing: str, incoming: str) -> str:
+    existing = existing.strip()
+    incoming = incoming.strip()
+
+    if not incoming:
+        return existing
+    if not existing:
+        return incoming
+    if incoming.startswith(existing):
+        return incoming
+    if existing.startswith(incoming):
+        return existing
+    if incoming in existing:
+        return existing
+
+    separator = "" if existing.endswith((" ", "\n")) else " "
+    return f"{existing}{separator}{incoming}".strip()
+
+
 def load_system_prompt() -> str:
-    prompt_path = Path(__file__).parent / "prompts" / "dating_sim_prompt.txt"
-    if prompt_path.exists():
-        return prompt_path.read_text(encoding="utf-8")
+    prompt_dir = Path(__file__).parent / "prompts"
+    for prompt_name in ("oral_practice_prompt.txt", "dating_sim_prompt.txt"):
+        prompt_path = prompt_dir / prompt_name
+        if prompt_path.exists():
+            return prompt_path.read_text(encoding="utf-8")
 
     return (
-        "You are a charming AI companion. "
-        "Your goal is to have a warm, engaging, emotionally intelligent conversation."
+        "You are a warm anime-style cafe partner in a spoken English practice game. "
+        "Keep the conversation lively, helpful, and concise."
     )
 
 
@@ -69,20 +94,29 @@ def normalize_characters(value) -> list[str]:
     return selected or ["shizuku", "chitose"]
 
 
-def generate_dynamic_prompt(characters: list[str]) -> str:
+def normalize_target_language(value) -> str:
+    from language_support import get_language
+
+    return get_language(str(value).strip() if value else None).code
+
+
+def generate_dynamic_prompt(characters: list[str], practice_session: PracticeSession) -> str:
     base_prompt = load_system_prompt().strip()
+    practice_block = practice_session.build_system_prompt_block()
     if characters == ["shizuku", "chitose"]:
         return (
             f"{base_prompt}\n\n"
-            "Scene context: this is a cozy anime-style dating game. "
-            "Keep the conversation playful, romantic, and centered on both Shizuku and Chitose."
+            "Scene context: this is a cozy anime-style oral English adventure in a cafe. "
+            "Shizuku and Chitose can both react, but the conversation must stay focused on helping the player speak English.\n\n"
+            f"{practice_block}"
         )
 
     focus = characters[0].capitalize()
     return (
         f"{base_prompt}\n\n"
         f"Scene context: this route is focused on {focus}. "
-        f"Keep the conversation playful, romantic, and centered on {focus}."
+        f"Keep the conversation playful, immersive, and centered on helping the player practice English with {focus}.\n\n"
+        f"{practice_block}"
     )
 
 
@@ -193,6 +227,12 @@ async def websocket_endpoint(websocket: WebSocket):
     selected_characters = normalize_characters(
         websocket.query_params.get("characters", "all")
     )
+    practice_session = PracticeSession(
+        selected_characters=list(selected_characters),
+        target_language_code=normalize_target_language(
+            websocket.query_params.get("target_language", "en-US")
+        ),
+    )
     first_message = None
 
     try:
@@ -201,7 +241,12 @@ async def websocket_endpoint(websocket: WebSocket):
             selected_characters = normalize_characters(
                 first_message.get("characters", ["all"])
             )
+            practice_session.selected_characters = list(selected_characters)
             logger.info("Handshake - Initial selected characters: %s", selected_characters)
+        elif first_message.get("type") == "target_language":
+            practice_session.target_language_code = normalize_target_language(
+                first_message.get("target_language")
+            )
         else:
             logger.warning(
                 "Handshake - Unexpected initial event: %s. Using query/default characters.",
@@ -211,7 +256,7 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.warning("Handshake - Falling back to default characters: %s", exc)
 
     try:
-        system_prompt = generate_dynamic_prompt(selected_characters)
+        system_prompt = generate_dynamic_prompt(selected_characters, practice_session)
         tools = get_all_tools()
         logger.info(
             "Loaded %s tools. Initial system prompt compiled for: %s",
@@ -239,6 +284,67 @@ async def websocket_endpoint(websocket: WebSocket):
         )
         logger.info("Strands BidiAgent instantiated successfully.")
 
+        async def send_game_state():
+            await websocket.send_json(
+                {
+                    "type": "game_state",
+                    "state": practice_session.to_payload(),
+                }
+            )
+
+        await send_game_state()
+
+        current_user_transcript = ""
+        pending_user_turn = False
+
+        async def score_pending_user_turn():
+            nonlocal current_user_transcript, pending_user_turn
+            if not pending_user_turn or not current_user_transcript.strip():
+                return
+
+            mission = practice_session.current_mission
+            try:
+                multi_agent_result = await asyncio.to_thread(
+                    analyze_turn,
+                    model_id=MULTI_AGENT_MODEL_ID,
+                    region_name=AWS_BEDROCK_REGION,
+                    selected_characters=list(selected_characters),
+                    mission_title=mission.title if mission else "Challenge Complete",
+                    mission_objective=(
+                        mission.objective
+                        if mission
+                        else "All oral-practice missions have been cleared."
+                    ),
+                    coach_tip=mission.coach_tip if mission else "",
+                    last_feedback=practice_session.last_feedback,
+                    transcript=current_user_transcript,
+                    stage_index=min(
+                        practice_session.stage_index + 1, practice_session.total_stages
+                    ),
+                    total_stages=practice_session.total_stages,
+                    turns_remaining=practice_session.turns_remaining,
+                    overall_score=practice_session.overall_score,
+                    status=practice_session.status,
+                    target_language_code=practice_session.target_language.code,
+                    target_language_label=practice_session.target_language.label,
+                )
+                practice_session.record_user_turn(
+                    current_user_transcript, agent_analysis=multi_agent_result
+                )
+                practice_session.apply_multi_agent_result(multi_agent_result)
+            except Exception as exc:
+                logger.exception("Multi-agent team analysis failed")
+                practice_session.record_user_turn(current_user_transcript)
+                practice_session.apply_multi_agent_error(
+                    model_id=MULTI_AGENT_MODEL_ID,
+                    error_message=str(exc),
+                )
+            agent.system_prompt = generate_dynamic_prompt(
+                selected_characters, practice_session
+            )
+            await send_game_state()
+            pending_user_turn = False
+
         async def receive_and_convert():
             nonlocal first_message, selected_characters
             while True:
@@ -265,7 +371,10 @@ async def websocket_endpoint(websocket: WebSocket):
                     selected_characters = normalize_characters(
                         data.get("characters", ["all"])
                     )
-                    agent.system_prompt = generate_dynamic_prompt(selected_characters)
+                    practice_session.selected_characters = list(selected_characters)
+                    agent.system_prompt = generate_dynamic_prompt(
+                        selected_characters, practice_session
+                    )
                     logger.info(
                         "Selected characters updated mid-session to: %s",
                         selected_characters,
@@ -276,6 +385,16 @@ async def websocket_endpoint(websocket: WebSocket):
                             "characters": selected_characters,
                         }
                     )
+                    continue
+
+                if event_type == "target_language":
+                    practice_session.target_language_code = normalize_target_language(
+                        data.get("target_language")
+                    )
+                    agent.system_prompt = generate_dynamic_prompt(
+                        selected_characters, practice_session
+                    )
+                    await send_game_state()
                     continue
 
                 event_data = {k: v for k, v in data.items() if k != "type"}
@@ -294,6 +413,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     return None
 
         async def output_adapter(event):
+            nonlocal current_user_transcript, pending_user_turn
             event_type = type(event).__name__
             logger.info("Outbound agent event: %s", event_type)
 
@@ -306,12 +426,19 @@ async def websocket_endpoint(websocket: WebSocket):
                     elif isinstance(delta, str):
                         text = delta
 
+                role_name = getattr(event, "role", "assistant").upper()
+                if role_name == "USER" and text:
+                    current_user_transcript = merge_transcript_chunks(
+                        current_user_transcript, text
+                    )
+                    pending_user_turn = True
+
                 await websocket.send_json(
                     {
                         "event": {
                             "textOutput": {
                                 "content": text,
-                                "role": getattr(event, "role", "assistant").upper(),
+                                "role": role_name,
                             }
                         }
                     }
@@ -327,6 +454,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     }
                 )
             elif event_type in ["BidiResponseStartEvent", "ResponseStartEvent"]:
+                await score_pending_user_turn()
+
                 await websocket.send_json(
                     {
                         "event": {
@@ -338,6 +467,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     }
                 )
             elif event_type in ["BidiResponseCompleteEvent", "ResponseCompleteEvent"]:
+                await score_pending_user_turn()
+                current_user_transcript = ""
                 await websocket.send_json(
                     {
                         "event": {

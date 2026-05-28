@@ -54,7 +54,7 @@ export class DatingGameAgentcoreConstruct extends Construct {
     // 3. Grant full access to DynamoDB tables
     props.database.datingGameTable.grantFullAccess(runtime.role);
 
-    // 4. Grant access to invoke Bedrock models (Nova 2 Sonic)
+    // 4. Grant access to invoke Bedrock models used by the visible and hidden agents
     runtime.role.addToPrincipalPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -65,6 +65,7 @@ export class DatingGameAgentcoreConstruct extends Construct {
         resources: [
           "arn:aws:bedrock:*::foundation-model/amazon.nova-sonic-v1:0",
           "arn:aws:bedrock:*::foundation-model/amazon.nova-2-sonic-v1:0",
+          "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",
         ],
       })
     );

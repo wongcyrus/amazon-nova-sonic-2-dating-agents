@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Amazon Nova Sonic Dating Game</title>
+  <title>Amazon Nova Sonic Oral Practice Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -37,7 +37,7 @@
         <div class="logo-wrapper left-wrapper">
           <div class="dating-logo">❤️</div>
         </div>
-        <h1 class="header-title">Amazon Nova Sonic Dating Game</h1>
+        <h1 class="header-title">Amazon Nova Sonic Oral Practice Game</h1>
         <div class="logo-wrapper right-wrapper">
           <div class="dating-logo">✨</div>
         </div>
@@ -65,7 +65,7 @@
       <div id="rpg-dialogue" class="rpg-dialogue-box">
         <div class="speaker-name" id="current-speaker">Narrator</div>
         <div class="dialogue-content">
-          <p id="dialogue-text">A cozy evening begins. Shizuku and Chitose are ready to meet you.</p>
+          <p id="dialogue-text">Welcome to Cafe English Quest. Clear each speaking mission before the challenge ends.</p>
         </div>
         <div class="dialogue-footer">
           <span class="next-indicator">▼</span>
@@ -84,6 +84,121 @@
         </div>
       </div>
     </div>
+
+    <section id="practice-panel" class="practice-panel">
+      <div class="practice-topline">
+        <div class="practice-chip">
+          <span class="practice-label">Stage</span>
+          <span id="mission-stage" class="practice-value">1 / 4</span>
+        </div>
+        <div class="practice-chip">
+          <span class="practice-label">Turns Left</span>
+          <span id="mission-turns" class="practice-value">16</span>
+        </div>
+        <div class="practice-chip">
+          <span class="practice-label">Overall Score</span>
+          <span id="overall-score-value" class="practice-value">0</span>
+        </div>
+      </div>
+
+      <div class="practice-language-row">
+        <label class="practice-language-label" for="target-language-select">Target Learning Language</label>
+        <select id="target-language-select" class="practice-language-select">
+          <option value="en-US" selected>English (US)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="en-AU">English (Australia)</option>
+          <option value="en-IN">English / Hindi (India)</option>
+          <option value="fr-FR">French</option>
+          <option value="it-IT">Italian</option>
+          <option value="de-DE">German</option>
+          <option value="es-US">Spanish (US)</option>
+          <option value="pt-BR">Portuguese (Brazil)</option>
+          <option value="hi-IN">Hindi</option>
+        </select>
+        <div id="target-language-note" class="practice-language-note">Recommended Nova Sonic voice: Tiffany.</div>
+      </div>
+
+      <div id="game-banner" class="game-banner">Speak in English to clear the current mission.</div>
+
+      <div class="practice-mission">
+        <div class="practice-section-label">Current Mission</div>
+        <h2 id="mission-title">Level 1 - Introduce Yourself</h2>
+        <p id="mission-objective">Say your name, where you are from or study, and one hobby.</p>
+      </div>
+
+      <div class="score-grid">
+        <div class="score-card">
+          <span>Task</span>
+          <strong id="score-taskCompletion">0</strong>
+        </div>
+        <div class="score-card">
+          <span>Fluency</span>
+          <strong id="score-fluency">0</strong>
+        </div>
+        <div class="score-card">
+          <span>Vocabulary</span>
+          <strong id="score-vocabulary">0</strong>
+        </div>
+        <div class="score-card">
+          <span>Grammar</span>
+          <strong id="score-grammar">0</strong>
+        </div>
+        <div class="score-card">
+          <span>Confidence</span>
+          <strong id="score-confidence">0</strong>
+        </div>
+      </div>
+
+      <div class="practice-feedback">
+        <div class="practice-section-label">Coach Feedback</div>
+        <p id="mission-feedback">Press Start, speak in English, and clear each mission before the challenge ends.</p>
+      </div>
+
+      <div class="practice-guide-grid">
+        <div class="practice-guide-card">
+          <div class="practice-section-label">How to Play This Mission</div>
+          <ol id="mission-steps" class="practice-list">
+            <li>Press Start Practice.</li>
+            <li>Listen to the character.</li>
+            <li>Answer in English with full sentences.</li>
+            <li>Follow the mission objective above.</li>
+          </ol>
+        </div>
+        <div class="practice-guide-card">
+          <div class="practice-section-label">Sample Answer</div>
+          <p id="mission-sample" class="practice-sample">
+            Hi, my name is Cyrus. I study at VTC in Hong Kong, and I enjoy listening to music after class.
+          </p>
+          <div class="practice-section-label practice-section-spacing">What Counts as Success</div>
+          <ul id="mission-success" class="practice-list practice-bullets">
+            <li>Mention your name.</li>
+            <li>Mention your school or background.</li>
+            <li>Mention one hobby.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="practice-agent-team">
+        <div class="practice-section-label">Multi-Agent Team</div>
+        <div id="agent-team-status" class="agent-team-status">Waiting for the first scored turn...</div>
+        <div class="agent-team-grid">
+          <div class="agent-team-card">
+            <h3>Coach Agent</h3>
+            <p id="agent-coach-feedback">The coach agent will suggest how to improve your next answer.</p>
+            <p id="agent-coach-example" class="agent-team-example"></p>
+          </div>
+          <div class="agent-team-card">
+            <h3>Judge Agent</h3>
+            <p id="agent-judge-summary">The judge agent will explain what parts of the mission you already covered.</p>
+          </div>
+          <div class="agent-team-card">
+            <h3>Director Agent</h3>
+            <p id="agent-director-brief">The director agent will decide the next roleplay beat after each turn.</p>
+            <p id="agent-director-goal" class="agent-team-example"></p>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Glowing status badge chip (Now under the scene) -->
     <div id="status" class="disconnected">Disconnected</div>
@@ -104,8 +219,8 @@
           <option value="chitose">Chitose</option>
         </select>
       </div>
-      <button id="start" class="button">Start Conversation</button>
-      <button id="stop" class="button" disabled>Stop Conversation</button>
+      <button id="start" class="button">Start Practice</button>
+      <button id="stop" class="button" disabled>Stop Practice</button>
     </div>
   </div>
 

@@ -309,6 +309,24 @@ const stopButton = document.getElementById('stop');
 const statusElement = document.getElementById('status');
 const chatContainer = document.getElementById('chat-container');
 const characterSelect = document.getElementById('character-select');
+const missionStageElement = document.getElementById('mission-stage');
+const missionTurnsElement = document.getElementById('mission-turns');
+const overallScoreElement = document.getElementById('overall-score-value');
+const missionTitleElement = document.getElementById('mission-title');
+const missionObjectiveElement = document.getElementById('mission-objective');
+const missionFeedbackElement = document.getElementById('mission-feedback');
+const gameBannerElement = document.getElementById('game-banner');
+const targetLanguageSelect = document.getElementById('target-language-select');
+const targetLanguageNoteElement = document.getElementById('target-language-note');
+const missionStepsElement = document.getElementById('mission-steps');
+const missionSampleElement = document.getElementById('mission-sample');
+const missionSuccessElement = document.getElementById('mission-success');
+const agentTeamStatusElement = document.getElementById('agent-team-status');
+const agentCoachFeedbackElement = document.getElementById('agent-coach-feedback');
+const agentCoachExampleElement = document.getElementById('agent-coach-example');
+const agentJudgeSummaryElement = document.getElementById('agent-judge-summary');
+const agentDirectorBriefElement = document.getElementById('agent-director-brief');
+const agentDirectorGoalElement = document.getElementById('agent-director-goal');
 
 // Chat history management
 let chat = { history: [] };
@@ -337,6 +355,7 @@ let displayAssistantText = false;
 let role;
 const audioPlayer = new AudioPlayer();
 let sessionInitialized = false;
+let gameState = null;
 
 // Voice-Text Real-time Lip-Sync and Typewriter synchronization variables
 let totalSamplesReceived = 0;
@@ -404,8 +423,135 @@ function getSelectedCharacters() {
     if (selected.length === 0 || selected.includes('all')) {
         return ['shizuku', 'chitose'];
     }
-
     return selected.filter(val => ['shizuku', 'chitose'].includes(val));
+}
+
+function renderGameState(state) {
+    if (!state) return;
+
+    gameState = state;
+
+    if (missionStageElement) {
+        missionStageElement.textContent = `${state.stageIndex} / ${state.totalStages}`;
+    }
+
+    if (missionTurnsElement) {
+        missionTurnsElement.textContent = String(state.turnsRemaining);
+    }
+
+    if (overallScoreElement) {
+        overallScoreElement.textContent = String(state.overallScore ?? 0);
+    }
+
+    if (missionTitleElement) {
+        missionTitleElement.textContent = state.currentMission?.title || 'Challenge Complete';
+    }
+
+    if (missionObjectiveElement) {
+        missionObjectiveElement.textContent =
+            state.currentMission?.objective || 'All speaking missions are cleared.';
+    }
+
+    if (missionFeedbackElement) {
+        missionFeedbackElement.textContent = state.lastFeedback || '';
+    }
+
+    if (missionStepsElement) {
+        const steps = state.currentMission?.howToPlay || [];
+        missionStepsElement.innerHTML = '';
+        steps.forEach((step) => {
+            const item = document.createElement('li');
+            item.textContent = step;
+            missionStepsElement.appendChild(item);
+        });
+    }
+
+    if (missionSampleElement) {
+        missionSampleElement.textContent =
+            state.currentMission?.sampleAnswer || 'Follow the mission prompt with a short spoken answer.';
+    }
+
+    if (missionSuccessElement) {
+        const signals = state.currentMission?.successSignals || [];
+        missionSuccessElement.innerHTML = '';
+        signals.forEach((signal) => {
+            const item = document.createElement('li');
+            item.textContent = signal;
+            missionSuccessElement.appendChild(item);
+        });
+    }
+
+    const agentTeam = state.agentTeam || {};
+    if (agentTeamStatusElement) {
+        agentTeamStatusElement.classList.remove('is-ready', 'is-error');
+        if (agentTeam.status === 'ready') {
+            agentTeamStatusElement.classList.add('is-ready');
+            agentTeamStatusElement.textContent = `Multi-agent team active (${agentTeam.model_id || 'configured model'}).`;
+        } else if (agentTeam.status === 'error') {
+            agentTeamStatusElement.classList.add('is-error');
+            agentTeamStatusElement.textContent = `Multi-agent team error: ${agentTeam.error_message || 'unknown error'}`;
+        } else {
+            agentTeamStatusElement.textContent = 'Waiting for the first scored turn...';
+        }
+    }
+
+    if (agentCoachFeedbackElement) {
+        agentCoachFeedbackElement.textContent =
+            agentTeam.coach_feedback || 'The coach agent will suggest how to improve your next answer.';
+    }
+    if (agentCoachExampleElement) {
+        agentCoachExampleElement.textContent = agentTeam.coach_example
+            ? `Model line: ${agentTeam.coach_example}`
+            : '';
+    }
+    if (agentJudgeSummaryElement) {
+        agentJudgeSummaryElement.textContent =
+            agentTeam.judge_summary || 'The judge agent will explain mission coverage after your answer.';
+    }
+    if (agentDirectorBriefElement) {
+        agentDirectorBriefElement.textContent =
+            agentTeam.director_scene_brief || 'The director agent will decide the next roleplay beat.';
+    }
+    if (agentDirectorGoalElement) {
+        agentDirectorGoalElement.textContent = agentTeam.director_assistant_goal
+            ? `Visible agent goal: ${agentTeam.director_assistant_goal}${agentTeam.director_next_question ? ` Next question: ${agentTeam.director_next_question}` : ''}`
+            : '';
+    }
+
+    const breakdown = state.lastBreakdown || {};
+    ['taskCompletion', 'fluency', 'vocabulary', 'grammar', 'confidence'].forEach((key) => {
+        const node = document.getElementById(`score-${key}`);
+        if (node) {
+            node.textContent = String(breakdown[key] ?? 0);
+        }
+    });
+
+    if (gameBannerElement) {
+        gameBannerElement.classList.remove('is-won', 'is-lost');
+        if (state.status === 'won') {
+            gameBannerElement.classList.add('is-won');
+            gameBannerElement.textContent = 'You win! All oral-practice missions are cleared.';
+        } else if (state.status === 'lost') {
+            gameBannerElement.classList.add('is-lost');
+            gameBannerElement.textContent = 'Challenge failed. Restart and clear all speaking missions next time.';
+        } else {
+            const passingScore = state.currentMission?.passingScore;
+            gameBannerElement.textContent = passingScore
+                ? `Pass score: ${passingScore}. Speak in ${targetLanguage.label || 'the target language'} and finish the mission objective.`
+                : 'Speak in the target language to clear the current mission.';
+        }
+    }
+
+    if (state.status === 'won' || state.status === 'lost') {
+        const speakerNameEl = document.getElementById('current-speaker');
+        const rpgDialogueText = document.getElementById('dialogue-text');
+        if (speakerNameEl) {
+            speakerNameEl.textContent = 'Narrator';
+        }
+        if (rpgDialogueText) {
+            rpgDialogueText.textContent = state.lastFeedback;
+        }
+    }
 }
 
 function applyCharacterSelection(values) {
@@ -439,6 +585,11 @@ function getAssistantSpeakerName() {
 
 characterSelect.addEventListener('change', () => {
     console.log(`Selected characters updated: ${getSelectedCharacters().join(', ')}`);
+});
+
+targetLanguageSelect?.addEventListener('change', () => {
+    if (!targetLanguageSelect.value) return;
+    socket.emit('target_language', targetLanguageSelect.value);
 });
 
 // Initialize WebSocket audio
@@ -485,6 +636,9 @@ async function initializeSession() {
         // Send events in sequence 
         const characters = getSelectedCharacters();
         socket.emit('character', characters);
+        if (targetLanguageSelect?.value) {
+            socket.emit('target_language', targetLanguageSelect.value);
+        }
         await new Promise(resolve => setTimeout(resolve, 250));
         socket.emit('promptStart');
         socket.emit('systemPrompt');
@@ -1028,6 +1182,10 @@ socket.on('audioOutput', (data) => {
     }
 });
 
+socket.on('game_state', (data) => {
+    renderGameState(data.state || data);
+});
+
 // Handle content end events
 socket.on('contentEnd', (data) => {
     console.log('Content end received:', data);
@@ -1138,6 +1296,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize the Live2D speaking avatar (falls back to Voice Orb automatically on load error)
     initLive2DAvatar(audioPlayer);
 
+    renderGameState({
+        status: 'in_progress',
+        stageIndex: 1,
+        totalStages: 4,
+        turnsRemaining: 16,
+        overallScore: 0,
+        lastFeedback: 'Press Start, speak in English, and clear each mission before the challenge ends.',
+        lastBreakdown: {
+            taskCompletion: 0,
+            fluency: 0,
+            vocabulary: 0,
+            grammar: 0,
+            confidence: 0
+        },
+        agentTeam: {
+            status: 'pending',
+            model_id: '',
+            coach_feedback: 'The coach agent is waiting for your first scored turn.',
+            coach_example: '',
+            judge_summary: 'The judge agent will explain mission coverage after your answer is scored.',
+            director_scene_brief: 'The director agent will set the next roleplay beat after your answer.',
+            director_assistant_goal: '',
+            director_next_question: '',
+            error_message: ''
+        },
+        targetLanguage: {
+            code: 'en-US',
+            label: 'English (US)',
+            recommendedVoice: 'tiffany'
+        },
+        supportedLanguages: [
+            { code: 'en-US', label: 'English (US)', recommendedVoice: 'tiffany' },
+            { code: 'en-GB', label: 'English (UK)', recommendedVoice: 'tiffany' },
+            { code: 'en-AU', label: 'English (Australia)', recommendedVoice: 'tiffany' },
+            { code: 'en-IN', label: 'English / Hindi (India)', recommendedVoice: 'tiffany' },
+            { code: 'fr-FR', label: 'French', recommendedVoice: 'tiffany' },
+            { code: 'it-IT', label: 'Italian', recommendedVoice: 'tiffany' },
+            { code: 'de-DE', label: 'German', recommendedVoice: 'tiffany' },
+            { code: 'es-US', label: 'Spanish (US)', recommendedVoice: 'tiffany' },
+            { code: 'pt-BR', label: 'Portuguese (Brazil)', recommendedVoice: 'tiffany' },
+            { code: 'hi-IN', label: 'Hindi', recommendedVoice: 'tiffany' }
+        ],
+        currentMission: {
+            title: 'Level 1 - Introduce Yourself',
+            objective: 'Say your name, where you are from or study, and one hobby.',
+            howToPlay: [
+                'Press Start Practice.',
+                'Listen to the character greeting.',
+                'Say your name, school or city, and one hobby.',
+                'Use full English sentences.'
+            ],
+            sampleAnswer: 'Hi, my name is Cyrus. I study at VTC in Hong Kong, and I enjoy listening to music after class.',
+            successSignals: [
+                'Mention your name.',
+                'Mention your school or background.',
+                'Mention one hobby.'
+            ],
+            passingScore: 72
+        }
+    });
+
     // Check for character parameter in URL
     const params = getQueryParams();
     const requestedCharacters = (params.characters || params.character || '')
@@ -1155,3 +1374,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 3000);
     }
 });
+    const targetLanguage = state.targetLanguage || {};
+    const supportedLanguages = state.supportedLanguages || [];
+    if (targetLanguageSelect) {
+        if (supportedLanguages.length > 0 && targetLanguageSelect.options.length !== supportedLanguages.length) {
+            targetLanguageSelect.innerHTML = '';
+            supportedLanguages.forEach((language) => {
+                const option = document.createElement('option');
+                option.value = language.code;
+                option.textContent = language.label;
+                targetLanguageSelect.appendChild(option);
+            });
+        }
+        if (targetLanguage.code) {
+            targetLanguageSelect.value = targetLanguage.code;
+        }
+    }
+    if (targetLanguageNoteElement) {
+        targetLanguageNoteElement.textContent = targetLanguage.recommendedVoice
+            ? `Recommended Nova Sonic voice: ${targetLanguage.recommendedVoice}.`
+            : 'Recommended Nova Sonic voice: Tiffany.';
+    }

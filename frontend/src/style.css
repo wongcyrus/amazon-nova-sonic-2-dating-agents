@@ -186,6 +186,239 @@ body {
   box-shadow: 0 0 15px rgba(192, 57, 43, 0.2);
 }
 
+/* ==========================================================================
+   Oral Practice Mission Panel
+   ========================================================================== */
+.practice-panel {
+  margin: 0 0 12px 0;
+  padding: 18px 20px;
+  background: rgba(20, 20, 30, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.practice-topline {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.practice-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.practice-label,
+.practice-section-label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.practice-value {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.game-banner {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(14, 165, 233, 0.14));
+  border: 1px solid rgba(129, 140, 248, 0.22);
+  color: #dbeafe;
+  font-weight: 600;
+}
+
+.game-banner.is-won {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(34, 197, 94, 0.14));
+  border-color: rgba(74, 222, 128, 0.28);
+  color: #dcfce7;
+}
+
+.game-banner.is-lost {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(217, 70, 239, 0.14));
+  border-color: rgba(248, 113, 113, 0.28);
+  color: #fee2e2;
+}
+
+.practice-language-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 260px) 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.practice-language-label {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.practice-language-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 15, 25, 0.85);
+  color: #fff;
+  font-family: inherit;
+}
+
+.practice-language-note {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.practice-mission h2,
+.practice-feedback p {
+  margin: 6px 0 0 0;
+}
+
+.practice-mission h2 {
+  font-size: 1.15rem;
+}
+
+.practice-mission p,
+.practice-feedback p {
+  color: #dbe4f0;
+}
+
+.practice-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.practice-guide-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.practice-list {
+  margin: 10px 0 0 18px;
+  padding: 0;
+  color: #dbe4f0;
+}
+
+.practice-list li + li {
+  margin-top: 8px;
+}
+
+.practice-bullets {
+  list-style: disc;
+}
+
+.practice-sample {
+  margin: 8px 0 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(129, 140, 248, 0.14);
+  color: #e0e7ff;
+  line-height: 1.6;
+}
+
+.practice-section-spacing {
+  margin-top: 14px;
+}
+
+.practice-agent-team {
+  margin-top: 16px;
+}
+
+.agent-team-status {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: #dbe4f0;
+}
+
+.agent-team-status.is-ready {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.24);
+  color: #dcfce7;
+}
+
+.agent-team-status.is-error {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.24);
+  color: #fee2e2;
+}
+
+.agent-team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.agent-team-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.agent-team-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+}
+
+.agent-team-card p {
+  margin: 0;
+  color: #dbe4f0;
+  line-height: 1.55;
+}
+
+.agent-team-example {
+  margin-top: 10px !important;
+  color: #c7d2fe !important;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.score-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.score-card span {
+  display: block;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.score-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.05rem;
+  color: #f8fafc;
+}
+
 @keyframes status-breath {
   0% { opacity: 0.6; }
   100% { opacity: 1; }
@@ -687,6 +920,17 @@ button:disabled,
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px;
+  }
+
+  .practice-topline,
+  .score-grid,
+  .practice-guide-grid,
+  .agent-team-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .practice-language-row {
+    grid-template-columns: 1fr;
   }
 
   button, .button {
