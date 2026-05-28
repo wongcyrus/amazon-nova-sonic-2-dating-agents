@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Amazon Nova Sonic Dating Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Live2D Core Dependencies -->
+  <!-- 1. High-Performance 2D WebGL Renderer (Correct browser-ready bundle path for PixiJS v6) -->
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js"></script>
+  <!-- 2. Official Live2D Cubism 2 Core SDK (for legacy .moc models) -->
+  <script src="https://cdn.jsdelivr.net/gh/dylanNew/live2d/webgl/Live2D/lib/live2d.min.js"></script>
+  <!-- 3. Pixi-Live2D-Display Adapter (Cubism 2.1 specific build to prevent Cubism 4 runtime check crashes) -->
+  <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/cubism2.min.js"></script>
+
+  <link rel="stylesheet" href="/src/style.css" />
+  <style>
+    :root {
+      --rpg-gold: #d4af37;
+      --rpg-panel: rgba(26, 26, 26, 0.85);
+      --rpg-border: rgba(212, 175, 55, 0.6);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <!-- RPG Stage Viewport -->
+    <div id="rpg-stage" class="rpg-stage">
+      <div class="background-layer" style="background-image: url('/cafe_bg.png');"></div>
+
+      <!-- Integrated Game Header -->
+      <header class="web-header game-overlay">
+        <div class="logo-wrapper left-wrapper">
+          <div class="dating-logo">❤️</div>
+        </div>
+        <h1 class="header-title">Amazon Nova Sonic Dating Game</h1>
+        <div class="logo-wrapper right-wrapper">
+          <div class="dating-logo">✨</div>
+        </div>
+      </header>
+      
+      <!-- Scanlines & Cinematic Effects -->
+      <div class="cinematic-overlay">
+        <div class="scanlines"></div>
+        <div class="vignette"></div>
+      </div>
+
+      <!-- Live2D Characters -->
+      <div class="character-container">
+        <div id="char-left" class="character-slot">
+          <canvas id="live2d-left" class="live2d-canvas"></canvas>
+          <div class="name-tag left">SHIZUKU</div>
+        </div>
+        <div id="char-right" class="character-slot">
+          <canvas id="live2d-right" class="live2d-canvas"></canvas>
+          <div class="name-tag right">CHITOSE</div>
+        </div>
+      </div>
+
+      <!-- RPG Dialogue Box -->
+      <div id="rpg-dialogue" class="rpg-dialogue-box">
+        <div class="speaker-name" id="current-speaker">Narrator</div>
+        <div class="dialogue-content">
+          <p id="dialogue-text">A cozy evening begins. Shizuku and Chitose are ready to meet you.</p>
+        </div>
+        <div class="dialogue-footer">
+          <span class="next-indicator">▼</span>
+        </div>
+      </div>
+
+      <!-- HUD Elements -->
+      <div class="rpg-hud">
+        <div class="hud-item">
+          <div class="hud-label">VOICE STATUS</div>
+          <div class="hud-bar"><div id="voice-bar-fill" class="bar-fill"></div></div>
+        </div>
+        <div class="hud-item">
+          <div class="hud-label">AI SYNC</div>
+          <div class="hud-bar"><div class="bar-fill" style="width: 92%;"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Glowing status badge chip (Now under the scene) -->
+    <div id="status" class="disconnected">Disconnected</div>
+
+    <!-- Hidden fallback voice-orb -->
+    <div id="voice-orb" style="display: none;"></div>
+
+    <!-- Main dialogue history screen (Original) -->
+    <div id="chat-container" style="display: none;"></div>
+
+    <!-- Fixed controls toolbar at the bottom -->
+    <div id="controls">
+      <div id="character-selector">
+        <label for="character-select" style="display: none">Choose character</label>
+        <select id="character-select" multiple size="3" style="display: none">
+          <option value="all" selected>Shizuku + Chitose</option>
+          <option value="shizuku">Shizuku</option>
+          <option value="chitose">Chitose</option>
+        </select>
+      </div>
+      <button id="start" class="button">Start Conversation</button>
+      <button id="stop" class="button" disabled>Stop Conversation</button>
+    </div>
+  </div>
+
+  <script src="/src/auth-check.js"></script>
+  <script type="module" src="/src/main.js?v=1.0.23"></script>
+</body>
+
+</html>

@@ -1,0 +1,1016 @@
+/* ==========================================================================
+   Premium Glassmorphic Cyberpunk Design System
+   Speech Control Hub UI
+   ========================================================================== */
+
+:root {
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: #f3f4f6;
+  background-color: #0d0d12;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom background grid with cyber gradients */
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  min-height: 100vh;
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(90, 40, 180, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(20, 150, 180, 0.08) 0%, transparent 40%),
+    #0d0d12;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  body {
+    height: auto;
+    overflow-y: visible;
+  }
+}
+
+#app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   Header Styling
+   ========================================================================== */
+.web-header.game-overlay {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px;
+  background: rgba(13, 13, 18, 0.75);
+  border: 1px solid var(--rpg-border);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
+.logo-wrapper {
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1));
+  transition: all 0.3s ease;
+}
+
+.logo-wrapper:hover {
+  filter: drop-shadow(0 0 16px rgba(100, 108, 255, 0.4));
+  transform: scale(1.03);
+}
+
+.logo-wrapper img {
+  height: 60px;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.dating-logo {
+  font-size: 2rem;
+  filter: drop-shadow(0 0 10px rgba(255, 105, 180, 0.6));
+  animation: heart-beat 1.5s infinite ease-in-out;
+}
+
+@keyframes heart-beat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.header-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 20px;
+  flex: 1;
+  text-align: center;
+  line-height: 1.3;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ==========================================================================
+   Floating Tech Pill Status
+   ========================================================================== */
+#status {
+  padding: 6px 14px;
+  margin: 5px auto 5px auto;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: center;
+  width: fit-content;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid transparent;
+}
+
+.connected {
+  background-color: rgba(39, 174, 96, 0.15);
+  color: #2ecc71;
+  border-color: rgba(46, 204, 113, 0.3);
+  box-shadow: 0 0 15px rgba(46, 204, 113, 0.15);
+}
+
+.disconnected {
+  background-color: rgba(230, 126, 34, 0.12);
+  color: #e67e22;
+  border-color: rgba(230, 126, 34, 0.25);
+  box-shadow: 0 0 15px rgba(230, 126, 34, 0.1);
+}
+
+.connecting {
+  background-color: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+  border-color: rgba(52, 152, 219, 0.3);
+  box-shadow: 0 0 15px rgba(52, 152, 219, 0.15);
+  animation: status-breath 1.5s infinite alternate ease-in-out;
+}
+
+.ready {
+  background-color: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border-color: rgba(46, 204, 113, 0.3);
+  box-shadow: 0 0 15px rgba(46, 204, 113, 0.15);
+}
+
+.recording {
+  background-color: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  border-color: rgba(231, 76, 60, 0.3);
+  box-shadow: 0 0 15px rgba(231, 76, 60, 0.2);
+  animation: status-pulse 1s infinite alternate ease-in-out;
+}
+
+.processing {
+  background-color: rgba(155, 89, 182, 0.15);
+  color: #9b59b6;
+  border-color: rgba(155, 89, 182, 0.3);
+  box-shadow: 0 0 15px rgba(155, 89, 182, 0.15);
+}
+
+.error {
+  background-color: rgba(192, 57, 43, 0.15);
+  color: #c0392b;
+  border-color: rgba(192, 57, 43, 0.3);
+  box-shadow: 0 0 15px rgba(192, 57, 43, 0.2);
+}
+
+@keyframes status-breath {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+@keyframes status-pulse {
+  0% { transform: scale(0.97); filter: brightness(0.9); }
+  100% { transform: scale(1.03); filter: brightness(1.1); }
+}
+
+/* ==========================================================================
+   Interactive Hologram Viewport (Live2D Avatar Frame)
+   ========================================================================== */
+.hologram-viewport {
+  width: 340px;
+  height: 340px;
+  margin: 10px auto 20px auto;
+  position: relative;
+  background: radial-gradient(circle, rgba(90, 40, 180, 0.12) 0%, rgba(20, 20, 30, 0.5) 80%);
+  border: 1px solid rgba(165, 180, 252, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    inset 0 0 24px rgba(100, 108, 255, 0.15);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Sci-Fi HUD Corners */
+.hud-corners {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hud-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(165, 180, 252, 0.35);
+}
+
+.hud-corner.top-left {
+  top: 16px;
+  left: 16px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.hud-corner.top-right {
+  top: 16px;
+  right: 16px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.hud-corner.bottom-left {
+  bottom: 16px;
+  left: 16px;
+  border-right: none;
+  border-top: none;
+}
+
+.hud-corner.bottom-right {
+  bottom: 16px;
+  right: 16px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Moving scanlines effect for hologram look */
+.scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.25) 50%
+  ), linear-gradient(
+    90deg, 
+    rgba(165, 180, 252, 0.05), 
+    rgba(100, 108, 255, 0.02), 
+    rgba(165, 180, 252, 0.05)
+  );
+  background-size: 100% 4px, 6px 100%;
+  opacity: 0.25;
+  pointer-events: none;
+  animation: scanline-shimmer 20s linear infinite;
+}
+
+/* Viewport overlays */
+.viewport-overlay {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  box-sizing: border-box;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.avatar-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #a5b4fc;
+  text-shadow: 0 0 8px rgba(165, 180, 252, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.avatar-tag::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background-color: #34d399;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #34d399;
+  animation: pulse-green 1.5s infinite alternate ease-in-out;
+}
+
+.viewport-overlay .version-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes pulse-green {
+  0% { transform: scale(0.9); opacity: 0.6; box-shadow: 0 0 4px #34d399; }
+  100% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 10px #34d399; }
+}
+
+@keyframes scanline-shimmer {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+/* ==========================================================================
+   Glassmorphic Chat Container
+   ========================================================================== */
+#chat-container {
+  flex: 1;
+  overflow-y: auto;
+  background: rgba(20, 20, 30, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  margin: 0 0 92px 0; /* Clear bottom controls */
+  padding: 24px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 2px 20px rgba(0,0,0,0.5);
+}
+
+/* Scrollbar Customization */
+#chat-container::-webkit-scrollbar {
+  width: 6px;
+}
+#chat-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+#chat-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+#chat-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Dialogue Bubbles */
+.message {
+  margin: 12px 0;
+  padding: 14px 20px;
+  border-radius: 16px;
+  position: relative;
+  max-width: 65%;
+  word-wrap: break-word;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: bubble-appear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes bubble-appear {
+  0% { transform: translateY(15px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.message:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.user {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  margin-left: auto;
+  border: 1px solid rgba(147, 197, 253, 0.15);
+}
+
+.assistant {
+  background: linear-gradient(135deg, rgba(76, 29, 149, 0.15) 0%, rgba(109, 40, 217, 0.1) 100%);
+  color: #fff;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  margin-right: auto;
+  border: 1px solid rgba(196, 181, 253, 0.15);
+}
+
+.system {
+  background: rgba(30, 41, 59, 0.3);
+  color: #94a3b8;
+  font-style: italic;
+  max-width: 85%;
+  align-self: center;
+  text-align: center;
+  font-size: 0.85rem;
+  border-radius: 30px;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+.role-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.user .role-label {
+  color: #60a5fa;
+  text-align: right;
+}
+
+.assistant .role-label {
+  color: #a78bfa;
+}
+
+.conversation-end {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  color: #64748b;
+  font-style: italic;
+  padding: 8px 20px;
+  border-radius: 20px;
+  margin: 16px auto;
+  text-align: center;
+  max-width: 50%;
+  font-size: 0.85rem;
+}
+
+.thinking-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  height: 20px;
+  margin-left: 5px;
+}
+
+.thinking-text {
+  font-style: italic;
+  color: #a78bfa;
+  font-size: 0.9rem;
+}
+
+.thinking-dots .dot {
+  width: 6px;
+  height: 6px;
+  background-color: #a78bfa;
+  border-radius: 50%;
+  animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.thinking-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pulse {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1.1); opacity: 1; }
+}
+
+/* ==========================================================================
+   Toolbar Controls (Footer Layout)
+   ========================================================================== */
+#controls {
+  position: relative;
+  margin-top: 5px;
+  padding: 15px 20px;
+  background: rgba(13, 13, 18, 0.4);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+  border-radius: 12px;
+}
+
+button,
+.button {
+  font-family: 'Outfit', sans-serif;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid transparent;
+  padding: 12px 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Green Start Button */
+#start {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+#start:hover:not(:disabled) {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Red Stop Button */
+#stop {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+#stop:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
+
+/* Translucent Route Selection Button */
+#open-character-modal {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+#open-character-modal:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+button:disabled,
+.button:disabled {
+  background: #1e293b;
+  color: #64748b;
+  border-color: rgba(255,255,255,0.02);
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none !important;
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   Modals & Route Selector Checkboxes
+   ========================================================================== */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.modal-content {
+  background: rgba(20, 20, 30, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(20px);
+  border-radius: 20px !important;
+  margin: 8% auto !important;
+  padding: 32px !important;
+  color: #fff;
+  text-align: center;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.close {
+  color: rgba(255,255,255,0.4);
+  position: absolute;
+  right: 20px;
+  top: 14px;
+  font-size: 24px;
+  font-weight: normal;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.close:hover {
+  color: #fff;
+}
+
+#character-modal button {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+#character-modal button:hover {
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+@media (max-width: 768px) {
+  #app {
+    padding: 1rem;
+  }
+
+  .web-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 12px 0;
+    padding: 16px;
+    border-radius: 12px;
+  }
+  
+  .left-wrapper {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+  
+  .right-wrapper {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+  
+  .header-title {
+    grid-column: 1 / span 2;
+    grid-row: 2;
+    font-size: 1rem;
+    margin: 4px 0 0 0;
+    text-align: center;
+  }
+
+  .logo-wrapper img {
+    height: 44px;
+  }
+
+  .message {
+    max-width: 85%;
+  }
+
+  #chat-container {
+    padding: 16px;
+    margin-bottom: 140px; /* Safe space for wrapped buttons */
+  }
+
+  #controls {
+    padding: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  button, .button {
+    padding: 10px 20px;
+    font-size: 0.85rem;
+    flex: 1 1 45%;
+    justify-content: center;
+  }
+
+  #open-character-modal {
+    flex: 1 1 100%;
+    order: -1; /* Place selection at the top */
+  }
+}
+
+/* ==========================================================================
+   RPG Stage & Cinematic Effects
+   ========================================================================== */
+.rpg-stage {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  margin: 0 auto 20px auto;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 2px solid var(--rpg-border);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  background: #000;
+}
+
+.background-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.5s ease;
+  z-index: 1;
+}
+
+.cinematic-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.7) 100%);
+}
+
+.character-container {
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  width: 100%;
+  height: 400px;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  z-index: 10;
+  padding: 0 50px;
+  box-sizing: border-box;
+}
+
+.character-slot {
+  position: relative;
+  width: 320px;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: brightness(0.7) grayscale(0.2);
+}
+
+.character-slot.active {
+  filter: brightness(1.1) grayscale(0);
+  transform: scale(1.05) translateY(-10px);
+}
+
+.live2d-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.name-tag {
+  position: absolute;
+  top: -40px;
+  background: var(--rpg-panel);
+  border: 1px solid var(--rpg-gold);
+  color: var(--rpg-gold);
+  padding: 4px 16px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.character-slot.active .name-tag {
+  opacity: 1;
+}
+
+/* RPG Dialogue Box */
+.rpg-dialogue-box {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  height: 140px;
+  background: var(--rpg-panel);
+  border: 2px solid var(--rpg-gold);
+  border-radius: 12px;
+  z-index: 20;
+  padding: 20px 30px;
+  box-sizing: border-box;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.speaker-name {
+  position: absolute;
+  top: -15px;
+  left: 30px;
+  background: var(--rpg-gold);
+  color: #000;
+  font-weight: 800;
+  padding: 4px 20px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.dialogue-content {
+  flex: 1;
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  font-weight: 400;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+.dialogue-footer {
+  text-align: right;
+  height: 20px;
+}
+
+.next-indicator {
+  color: var(--rpg-gold);
+  font-size: 1.2rem;
+  animation: bounce 1s infinite alternate;
+  display: inline-block;
+}
+
+@keyframes bounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(5px); }
+}
+
+/* RPG HUD */
+.rpg-hud {
+  position: absolute;
+  top: 95px;
+  right: 20px;
+  width: 250px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.hud-item {
+  background: rgba(0,0,0,0.6);
+  border-left: 4px solid var(--rpg-gold);
+  padding: 8px 15px;
+  border-radius: 0 8px 8px 0;
+}
+
+.hud-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--rpg-gold);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.hud-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--rpg-gold), #fff);
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  #app {
+    padding: 0;
+    max-width: none;
+  }
+  
+  .rpg-stage {
+    height: 100dvh;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    margin-bottom: 0;
+  }
+
+  .web-header.game-overlay {
+    top: env(safe-area-inset-top, 10px);
+    padding: 6px 12px;
+    width: 96%;
+  }
+
+  .logo-wrapper img {
+    height: 32px;
+  }
+
+  .header-title {
+    font-size: 0.8rem;
+    margin: 0 5px;
+  }
+
+  .rpg-hud {
+    top: calc(50px + env(safe-area-inset-top, 10px));
+    right: 10px;
+    width: 120px;
+    gap: 8px;
+  }
+
+  .hud-item {
+    padding: 3px 8px;
+    background: rgba(0,0,0,0.75);
+  }
+
+  .character-container {
+    bottom: 200px; /* Moved up to clear dialogue box */
+    padding: 0;
+    height: 55%;
+    display: flex;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .character-slot {
+    width: 180px;
+    height: 100%;
+    margin: 0 -20px; /* Slight overlap for closer proximity on mobile */
+  }
+
+  .live2d-canvas {
+    transform: scale(1.1); /* Zoom in slightly on mobile */
+  }
+
+  .rpg-dialogue-box {
+    height: 150px; /* Taller box for better legibility */
+    padding: 18px 20px;
+    bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+    width: 94%;
+    background: rgba(13, 13, 18, 0.95);
+  }
+
+  .speaker-name {
+    top: -14px;
+    left: 15px;
+    font-size: 0.8rem;
+    padding: 3px 12px;
+  }
+
+  .dialogue-content {
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+
+  #status {
+    margin: 10px auto;
+  }
+
+  #controls {
+    position: relative;
+    padding: 15px 10px;
+    background: rgba(13, 13, 18, 0.9);
+    border-top: 1px solid var(--rpg-border);
+    border-radius: 0;
+    gap: 8px;
+  }
+
+  button, .button {
+    padding: 12px 15px;
+    font-size: 0.85rem;
+    flex: 1 1 48%;
+  }
+}
+
+@media (max-width: 480px) {
+  .message {
+    max-width: 90%;
+  }
+
+  #chat-container {
+    padding: 12px;
+  }
+}
