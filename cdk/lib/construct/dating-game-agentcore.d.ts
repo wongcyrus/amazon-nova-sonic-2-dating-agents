@@ -8,6 +8,7 @@ export interface DatingGameAgentcoreConstructProps {
 }
 export declare class DatingGameAgentcoreConstruct extends Construct {
     readonly runtimeArn: string;
+    readonly analysisRuntimeArn: string;
     readonly serviceUrl: string;
     constructor(scope: Construct, id: string, props: DatingGameAgentcoreConstructProps);
 }

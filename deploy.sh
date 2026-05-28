@@ -1,14 +1,15 @@
 #!/bin/bash
 # Independent Deployment Script for Amazon Nova Sonic 2 Dating Agents
 
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}/cdk"
 
 echo "🚀 Deploying Amazon Nova Sonic 2 Dating Agents..."
 
 # Verify AWS credentials
-aws sts get-caller-identity > /dev/null
-if [ $? -ne 0 ]; then
+if ! aws sts get-caller-identity > /dev/null; then
     echo "❌ AWS credentials not found. Please run 'aws configure'."
     exit 1
 fi

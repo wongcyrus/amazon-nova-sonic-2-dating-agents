@@ -19,6 +19,7 @@ export interface DatingGameAgentcoreConstructProps {
 
 export class DatingGameAgentcoreConstruct extends Construct {
   public readonly runtimeArn: string;
+  public readonly analysisRuntimeArn: string;
   public readonly serviceUrl: string;
 
   constructor(
@@ -28,34 +29,64 @@ export class DatingGameAgentcoreConstruct extends Construct {
   ) {
     super(scope, id);
 
-    // 1. Package container directly onto AWS Bedrock AgentCore Runtime
-    const agentRuntimeArtifact = agentcore.AgentRuntimeArtifact.fromAsset(
-      path.join(__dirname, "../../../"),
+    const runtimeAssetPath = path.join(__dirname, "../../../");
+    const runtimeAssetOptions = {
+      platform: Platform.LINUX_ARM64,
+      exclude: [".venv", "__pycache__", "tests", "cdk"],
+    };
+
+    // 1. Package dedicated runtime images so the latency-sensitive voice path
+    // and the slower multi-agent scoring path can scale independently.
+    const realtimeRuntimeArtifact = agentcore.AgentRuntimeArtifact.fromAsset(
+      runtimeAssetPath,
       {
-        platform: Platform.LINUX_ARM64,
-        exclude: [".venv", "__pycache__", "tests", "cdk"], // Prevent virtualenv and cache files from inflating container size, keeping the essential public directory
+        ...runtimeAssetOptions,
+        file: "Dockerfile.realtime",
+      }
+    );
+    const analysisRuntimeArtifact = agentcore.AgentRuntimeArtifact.fromAsset(
+      runtimeAssetPath,
+      {
+        ...runtimeAssetOptions,
+        file: "Dockerfile.analysis",
       }
     );
 
-    // 2. Create the AgentCore Runtime with IAM authentication (SigV4)
-    const runtime = new agentcore.Runtime(this, "Runtime", {
+    // 2. Create the dedicated hidden turn-analysis runtime.
+    const analysisRuntime = new agentcore.Runtime(this, "TurnAnalysisRuntime", {
+      runtimeName: "dating_game_turn_analysis",
+      agentRuntimeArtifact: analysisRuntimeArtifact,
+      authorizerConfiguration: agentcore.RuntimeAuthorizerConfiguration.usingIAM(),
+      environmentVariables: {
+        IsInCloud: "yes",
+        AWS_BEDROCK_REGION: "us-east-1",
+      },
+    });
+
+    this.analysisRuntimeArn = analysisRuntime.agentRuntimeArn;
+
+    // 3. Reuse the original logical ID so CloudFormation updates the existing
+    // realtime runtime instead of attempting a conflicting replacement.
+    const realtimeRuntime = new agentcore.Runtime(this, "Runtime", {
       runtimeName: "dating_game_agentcore",
-      agentRuntimeArtifact: agentRuntimeArtifact,
+      agentRuntimeArtifact: realtimeRuntimeArtifact,
       authorizerConfiguration: agentcore.RuntimeAuthorizerConfiguration.usingIAM(),
       environmentVariables: {
         IsInCloud: "yes",
         AWS_BEDROCK_REGION: "us-east-1",
         DatingGameTable: props.database.datingGameTable.tableName,
+        MULTI_AGENT_MODEL_ID: "us.amazon.nova-2-lite-v1:0",
+        TURN_ANALYSIS_RUNTIME_ARN: analysisRuntime.agentRuntimeArn,
       },
     });
 
-    this.runtimeArn = runtime.agentRuntimeArn;
+    this.runtimeArn = realtimeRuntime.agentRuntimeArn;
 
-    // 3. Grant full access to DynamoDB tables
-    props.database.datingGameTable.grantFullAccess(runtime.role);
+    // 4. Grant the realtime runtime access to game state storage.
+    props.database.datingGameTable.grantFullAccess(realtimeRuntime.role);
 
-    // 4. Grant access to invoke Bedrock models used by the visible and hidden agents
-    runtime.role.addToPrincipalPolicy(
+    // 5. Grant the realtime runtime access only to the realtime voice models.
+    realtimeRuntime.role.addToPrincipalPolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
@@ -65,14 +96,41 @@ export class DatingGameAgentcoreConstruct extends Construct {
         resources: [
           "arn:aws:bedrock:*::foundation-model/amazon.nova-sonic-v1:0",
           "arn:aws:bedrock:*::foundation-model/amazon.nova-2-sonic-v1:0",
-          "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0",
         ],
       })
     );
 
-    // 5. (Optional) Grant Lambda invocation for specialized tools if added later
+    // 6. Grant the turn-analysis runtime access only to the non-realtime judge model.
+    analysisRuntime.role.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream",
+          "bedrock:Converse",
+          "bedrock:ConverseStream",
+        ],
+        resources: [
+          "arn:aws:bedrock:*::foundation-model/amazon.nova-2-lite-v1:0",
+          "arn:aws:bedrock:*:*:inference-profile/us.amazon.nova-2-lite-v1:0",
+          "arn:aws:bedrock:*:*:inference-profile/global.amazon.nova-2-lite-v1:0",
+        ],
+      })
+    );
 
-    // 6. Serverless Frontend S3 Website Bucket
+    // 7. Allow the realtime runtime to invoke the internal turn-analysis runtime.
+    realtimeRuntime.role.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["bedrock-agentcore:InvokeAgentRuntime"],
+        resources: [
+          analysisRuntime.agentRuntimeArn,
+          `${analysisRuntime.agentRuntimeArn}/*`,
+        ],
+      })
+    );
+
+    // 8. Serverless Frontend S3 Website Bucket
     const websiteBucket = new s3.Bucket(this, "DatingGameWebsiteBucket", {
       websiteIndexDocument: "index.html",
       removalPolicy: RemovalPolicy.DESTROY,
@@ -98,7 +156,7 @@ export class DatingGameAgentcoreConstruct extends Construct {
       })
     );
 
-    // 7. Cost-Efficient CloudFront Distribution (Price Class 100)
+    // 9. Cost-Efficient CloudFront Distribution (Price Class 100)
     const oai = new cloudfront.OriginAccessIdentity(this, "DatingGameOAI");
     websiteBucket.grantRead(oai);
 
@@ -116,7 +174,7 @@ export class DatingGameAgentcoreConstruct extends Construct {
 
     this.serviceUrl = distribution.distributionDomainName;
 
-    // 8. Deploy static web files and dynamic config.json to website bucket
+    // 10. Deploy static web files and dynamic config.json to website bucket
     new s3deploy.BucketDeployment(this, "DeployDatingGameWebsiteAndConfig", {
       sources: [
         s3deploy.Source.asset(path.join(__dirname, "../../../frontend")),
@@ -125,7 +183,7 @@ export class DatingGameAgentcoreConstruct extends Construct {
           userPoolId: props.userPoolId,
           clientId: props.userPoolClientId,
           identityPoolId: props.identityPoolId,
-          runtimeArn: runtime.agentRuntimeArn,
+          runtimeArn: realtimeRuntime.agentRuntimeArn,
         }),
       ],
       destinationBucket: websiteBucket,

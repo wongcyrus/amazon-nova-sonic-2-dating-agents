@@ -24,30 +24,59 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 320px;
-  min-height: 100vh;
+  height: 100vh;
   background: 
     radial-gradient(circle at 10% 20%, rgba(90, 40, 180, 0.08) 0%, transparent 40%),
     radial-gradient(circle at 90% 80%, rgba(20, 150, 180, 0.08) 0%, transparent 40%),
     #0d0d12;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
   body {
     height: auto;
-    overflow-y: visible;
+    overflow-y: auto;
   }
 }
 
 #app {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 1rem;
   width: 100%;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  min-height: 100vh;
+  gap: 12px;
+}
+
+.app-shell {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(360px, 1fr);
+  gap: 16px;
+}
+
+.play-column,
+.info-column {
+  min-height: 0;
+}
+
+.play-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.play-column-footer {
+  display: flex;
+  justify-content: center;
+}
+
+.info-column {
+  overflow: hidden;
 }
 
 /* ==========================================================================
@@ -122,7 +151,7 @@ body {
    ========================================================================== */
 #status {
   padding: 6px 14px;
-  margin: 5px auto 5px auto;
+  margin: 0 auto;
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -190,13 +219,16 @@ body {
    Oral Practice Mission Panel
    ========================================================================== */
 .practice-panel {
-  margin: 0 0 12px 0;
+  margin: 0;
   padding: 18px 20px;
   background: rgba(20, 20, 30, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   backdrop-filter: blur(16px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .practice-topline {
@@ -725,18 +757,20 @@ body {
    Toolbar Controls (Footer Layout)
    ========================================================================== */
 #controls {
-  position: relative;
-  margin-top: 5px;
+  position: sticky;
+  bottom: 0;
+  margin-top: 0;
   padding: 15px 20px;
-  background: rgba(13, 13, 18, 0.4);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(13, 13, 18, 0.78);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 12px;
   z-index: 100;
-  border-radius: 12px;
+  border-radius: 16px;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
 }
 
 button,
@@ -871,6 +905,16 @@ button:disabled,
 @media (max-width: 768px) {
   #app {
     padding: 1rem;
+    min-height: auto;
+  }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .info-column {
+    overflow: visible;
   }
 
   .web-header {
@@ -912,7 +956,7 @@ button:disabled,
 
   #chat-container {
     padding: 16px;
-    margin-bottom: 140px; /* Safe space for wrapped buttons */
+    margin-bottom: 140px;
   }
 
   #controls {
@@ -952,8 +996,9 @@ button:disabled,
 .rpg-stage {
   position: relative;
   width: 100%;
-  height: 600px;
-  margin: 0 auto 20px auto;
+  height: min(68vh, 720px);
+  min-height: 520px;
+  margin: 0;
   border-radius: 24px;
   overflow: hidden;
   border: 2px solid var(--rpg-border);
@@ -1015,6 +1060,10 @@ button:disabled,
   align-items: center;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   filter: brightness(0.7) grayscale(0.2);
+}
+
+.character-slot.is-hidden {
+  display: none;
 }
 
 .character-slot.active {

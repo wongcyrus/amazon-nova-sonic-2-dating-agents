@@ -55,5 +55,9 @@ export class AmazonNovaSonicDatingAgentsStack extends cdk.Stack {
     new cdk.CfnOutput(this, "CognitoUserPoolClientId", {
       value: authenticator.userPoolClient.userPoolClientId,
     });
+
+    new cdk.CfnOutput(this, "TurnAnalysisRuntimeArn", {
+      value: datingGameAgentcoreConstruct.analysisRuntimeArn,
+    });
   }
 }

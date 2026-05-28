@@ -1,12 +1,16 @@
 """FastAPI server and Strands BidiAgent for the oral-practice game."""
 
 import asyncio
+from dataclasses import asdict
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from uuid import uuid4
 
 import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -19,7 +23,7 @@ from strands.experimental.bidi.types.events import (
     BidiTextInputEvent,
 )
 
-from multi_agent_team import analyze_turn
+from multi_agent_team import MultiAgentTurnResult, analyze_turn
 from oral_practice import PracticeSession
 from tools import get_all_tools
 
@@ -43,8 +47,27 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 COGNITO_REGION = os.environ.get("CognitoRegion", "us-east-1")
 AWS_BEDROCK_REGION = os.environ.get("AWS_BEDROCK_REGION", "us-east-1")
-MULTI_AGENT_MODEL_ID = os.environ.get("MULTI_AGENT_MODEL_ID", "amazon.nova-pro-v1:0")
+MULTI_AGENT_MODEL_ID = os.environ.get(
+    "MULTI_AGENT_MODEL_ID", "us.amazon.nova-2-lite-v1:0"
+)
+TURN_ANALYSIS_RUNTIME_ARN = os.environ.get("TURN_ANALYSIS_RUNTIME_ARN")
 VALID_CHARACTERS = {"shizuku", "chitose"}
+SUPPORTED_ROUTE_VOICE_IDS = {
+    "tiffany",
+    "matthew",
+    "amy",
+    "olivia",
+    "kiara",
+    "ambre",
+    "beatrice",
+    "tina",
+    "lupe",
+    "carolina",
+}
+DEFAULT_ROUTE_VOICE_IDS = {
+    "shizuku": "tiffany",
+    "chitose": "matthew",
+}
 
 
 def merge_transcript_chunks(existing: str, incoming: str) -> str:
@@ -87,11 +110,10 @@ def normalize_characters(value) -> list[str]:
     else:
         raw_values = []
 
-    if not raw_values or "all" in raw_values:
-        return ["shizuku", "chitose"]
-
     selected = [name for name in raw_values if name in VALID_CHARACTERS]
-    return selected or ["shizuku", "chitose"]
+    if not selected or "all" in raw_values:
+        return ["shizuku"]
+    return [selected[0]]
 
 
 def normalize_target_language(value) -> str:
@@ -100,29 +122,124 @@ def normalize_target_language(value) -> str:
     return get_language(str(value).strip() if value else None).code
 
 
+def resolve_assistant_voice_id(
+    requested_voice_id: str | None, *, selected_characters: list[str]
+) -> str:
+    default_voice_id = DEFAULT_ROUTE_VOICE_IDS.get(
+        selected_characters[0] if len(selected_characters) == 1 else "shizuku",
+        "tiffany",
+    )
+    normalized_voice_id = str(requested_voice_id or "").strip().lower()
+    if not normalized_voice_id:
+        return default_voice_id
+    if normalized_voice_id in SUPPORTED_ROUTE_VOICE_IDS:
+        return normalized_voice_id
+
+    logger.warning(
+        "Ignoring voice_id '%s' for route %s and using route default '%s'.",
+        normalized_voice_id,
+        selected_characters,
+        default_voice_id,
+    )
+    return default_voice_id
+
+
 def generate_dynamic_prompt(characters: list[str], practice_session: PracticeSession) -> str:
     base_prompt = load_system_prompt().strip()
     practice_block = practice_session.build_system_prompt_block()
-    if characters == ["shizuku", "chitose"]:
-        return (
-            f"{base_prompt}\n\n"
-            "Scene context: this is a cozy anime-style oral English adventure in a cafe. "
-            "Shizuku and Chitose can both react, but the conversation must stay focused on helping the player speak English.\n\n"
-            f"{practice_block}"
-        )
-
-    focus = characters[0].capitalize()
+    focus = (characters[0] if characters else "shizuku").capitalize()
     return (
         f"{base_prompt}\n\n"
         f"Scene context: this route is focused on {focus}. "
-        f"Keep the conversation playful, immersive, and centered on helping the player practice English with {focus}.\n\n"
+        f"Keep the conversation playful, immersive, romantic, and centered on a believable date-style interaction with {focus}.\n\n"
         f"{practice_block}"
     )
+
+
+def _read_invoke_response_body(response_body) -> bytes:
+    if hasattr(response_body, "read"):
+        return response_body.read()
+    if isinstance(response_body, bytes):
+        return response_body
+    if isinstance(response_body, bytearray):
+        return bytes(response_body)
+    if isinstance(response_body, str):
+        return response_body.encode("utf-8")
+    if response_body is None:
+        return b""
+    if hasattr(response_body, "__iter__"):
+        return b"".join(
+            chunk if isinstance(chunk, bytes) else bytes(chunk)
+            for chunk in response_body
+        )
+    raise TypeError("AgentCore runtime returned an unsupported response body type.")
+
+
+def invoke_turn_analysis_runtime(
+    *,
+    analysis_request: dict,
+    runtime_session_id: str,
+) -> MultiAgentTurnResult:
+    client = boto3.client("bedrock-agentcore", region_name=AWS_BEDROCK_REGION)
+    try:
+        response = client.invoke_agent_runtime(
+            agentRuntimeArn=TURN_ANALYSIS_RUNTIME_ARN,
+            runtimeSessionId=runtime_session_id,
+            contentType="application/json",
+            accept="application/json",
+            payload=json.dumps(analysis_request).encode("utf-8"),
+        )
+    except (BotoCoreError, ClientError) as exc:
+        logger.exception("InvokeAgentRuntime call to turn analysis runtime failed")
+        raise RuntimeError(
+            "Turn analysis runtime failed internally. Check the analysis runtime CloudWatch logs."
+        ) from exc
+
+    if response.get("statusCode") != 200:
+        logger.error(
+            "Turn analysis runtime returned non-200 status: %s",
+            response.get("statusCode"),
+        )
+        raise RuntimeError(
+            "Turn analysis runtime failed internally. Check the analysis runtime CloudWatch logs."
+        )
+
+    response_text = _read_invoke_response_body(response.get("response")).decode(
+        "utf-8", errors="replace"
+    )
+    try:
+        response_payload = json.loads(response_text)
+    except json.JSONDecodeError as exc:
+        logger.exception("Turn analysis runtime returned invalid JSON: %s", response_text)
+        raise RuntimeError(
+            "Turn analysis runtime returned an invalid response payload."
+        ) from exc
+    return MultiAgentTurnResult(**response_payload)
+
+
+def run_turn_analysis(
+    *,
+    analysis_request: dict,
+    runtime_session_id: str,
+) -> MultiAgentTurnResult:
+    if TURN_ANALYSIS_RUNTIME_ARN:
+        return invoke_turn_analysis_runtime(
+            analysis_request=analysis_request,
+            runtime_session_id=runtime_session_id,
+        )
+
+    local_result = analyze_turn(**analysis_request)
+    logger.info("TURN_ANALYSIS_RUNTIME_ARN not set; using local in-process scoring.")
+    return MultiAgentTurnResult(**asdict(local_result))
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     logger.info("Dating Game AgentCore service starting up...")
+    logger.info(
+        "Turn analysis mode: %s",
+        "remote-runtime" if TURN_ANALYSIS_RUNTIME_ARN else "local-process",
+    )
     logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
     yield
     logger.info("Dating Game AgentCore service shutting down...")
@@ -223,9 +340,9 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     logger.info("WebSocket connection established via Bedrock AgentCore IAM.")
 
-    voice_id = websocket.query_params.get("voice_id", "tiffany")
+    requested_voice_id = websocket.query_params.get("voice_id")
     selected_characters = normalize_characters(
-        websocket.query_params.get("characters", "all")
+        websocket.query_params.get("characters", "shizuku")
     )
     practice_session = PracticeSession(
         selected_characters=list(selected_characters),
@@ -234,6 +351,7 @@ async def websocket_endpoint(websocket: WebSocket):
         ),
     )
     first_message = None
+    analysis_runtime_session_id = f"turn-analysis-{uuid4()}"
 
     try:
         first_message = await websocket.receive_json()
@@ -258,10 +376,15 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         system_prompt = generate_dynamic_prompt(selected_characters, practice_session)
         tools = get_all_tools()
+        voice_id = resolve_assistant_voice_id(
+            requested_voice_id,
+            selected_characters=list(selected_characters),
+        )
         logger.info(
-            "Loaded %s tools. Initial system prompt compiled for: %s",
+            "Loaded %s tools. Initial system prompt compiled for: %s. Voice: %s",
             len(tools),
             selected_characters,
+            voice_id,
         )
 
         model = BidiNovaSonicModel(
@@ -304,29 +427,35 @@ async def websocket_endpoint(websocket: WebSocket):
 
             mission = practice_session.current_mission
             try:
-                multi_agent_result = await asyncio.to_thread(
-                    analyze_turn,
-                    model_id=MULTI_AGENT_MODEL_ID,
-                    region_name=AWS_BEDROCK_REGION,
-                    selected_characters=list(selected_characters),
-                    mission_title=mission.title if mission else "Challenge Complete",
-                    mission_objective=(
+                analysis_request = {
+                    "model_id": MULTI_AGENT_MODEL_ID,
+                    "region_name": AWS_BEDROCK_REGION,
+                    "selected_characters": list(selected_characters),
+                    "mission_title": (
+                        mission.title if mission else "Challenge Complete"
+                    ),
+                    "mission_objective": (
                         mission.objective
                         if mission
                         else "All oral-practice missions have been cleared."
                     ),
-                    coach_tip=mission.coach_tip if mission else "",
-                    last_feedback=practice_session.last_feedback,
-                    transcript=current_user_transcript,
-                    stage_index=min(
+                    "coach_tip": mission.coach_tip if mission else "",
+                    "last_feedback": practice_session.last_feedback,
+                    "transcript": current_user_transcript,
+                    "stage_index": min(
                         practice_session.stage_index + 1, practice_session.total_stages
                     ),
-                    total_stages=practice_session.total_stages,
-                    turns_remaining=practice_session.turns_remaining,
-                    overall_score=practice_session.overall_score,
-                    status=practice_session.status,
-                    target_language_code=practice_session.target_language.code,
-                    target_language_label=practice_session.target_language.label,
+                    "total_stages": practice_session.total_stages,
+                    "turns_remaining": practice_session.turns_remaining,
+                    "overall_score": practice_session.overall_score,
+                    "status": practice_session.status,
+                    "target_language_code": practice_session.target_language.code,
+                    "target_language_label": practice_session.target_language.label,
+                }
+                multi_agent_result = await asyncio.to_thread(
+                    run_turn_analysis,
+                    analysis_request=analysis_request,
+                    runtime_session_id=analysis_runtime_session_id,
                 )
                 practice_session.record_user_turn(
                     current_user_transcript, agent_analysis=multi_agent_result
@@ -334,7 +463,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 practice_session.apply_multi_agent_result(multi_agent_result)
             except Exception as exc:
                 logger.exception("Multi-agent team analysis failed")
-                practice_session.record_user_turn(current_user_transcript)
+                practice_session.mark_scoring_unavailable(current_user_transcript)
                 practice_session.apply_multi_agent_error(
                     model_id=MULTI_AGENT_MODEL_ID,
                     error_message=str(exc),

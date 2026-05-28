@@ -1,4 +1,4 @@
-"""Oral-practice game state and transcript scoring helpers."""
+"""Oral-practice game state and AI scoring helpers."""
 
 from __future__ import annotations
 
@@ -25,8 +25,10 @@ class Mission:
     sample_answer: str
     success_signals: list[str]
     required_groups: list[list[str]]
+    required_group_labels: list[str]
     min_words: int
     clear_score: int
+    quick_win_tip: str
     required_questions: int = 0
 
 
@@ -46,20 +48,21 @@ class AgentTeamInsights:
 MISSIONS: list[Mission] = [
     Mission(
         id="intro",
-        title="Level 1 - Introduce Yourself",
-        objective="Say your name, where you are from or study, and one hobby.",
-        coach_tip="Use one smooth answer with 2-3 short sentences.",
+        title="Day 1 - First Meeting",
+        objective="Introduce yourself naturally on a first date: say your name, where you are from or study, and one hobby.",
+        coach_tip="Make it sound like a real first-date introduction, not a school presentation.",
         how_to_play=[
-            "Wait for the character to greet you.",
+            "Press Start Practice and listen to the greeting like you are meeting someone cute for the first time.",
             "Say your name in one full sentence.",
             "Add where you study or where you are from.",
-            "Finish with one hobby you enjoy.",
+            "Finish with one hobby that makes you sound interesting.",
+            "Press Stop Practice after your full answer to score this turn.",
         ],
         sample_answer=(
-            "Hi, my name is Cyrus. I study at VTC in Hong Kong, and I enjoy listening to music after class."
+            "Hi, my name is Cyrus. I study at HKIIT in Hong Kong, and I enjoy listening to music after class. It helps me relax."
         ),
         success_signals=[
-            "You mention your name.",
+            "You introduce yourself naturally.",
             "You mention your school, city, or background.",
             "You mention one hobby or interest.",
         ],
@@ -68,76 +71,105 @@ MISSIONS: list[Mission] = [
             ["i'm from", "i am from", "i live in", "i study at", "i study in"],
             ["i like", "i love", "i enjoy", "my hobby is"],
         ],
+        required_group_labels=[
+            "Say your name.",
+            "Say where you study, live, or come from.",
+            "Say one hobby or interest.",
+        ],
         min_words=12,
         clear_score=72,
+        quick_win_tip=(
+            "Say your name, where you study or live, and one hobby in one natural first-date answer. "
+            "Then press Stop Practice to score the turn."
+        ),
     ),
     Mission(
         id="questions",
-        title="Level 2 - Ask Questions",
-        objective="Ask at least two questions about hobbies, daily life, or study.",
-        coach_tip="Ask natural follow-up questions instead of one-word prompts.",
+        title="Day 2 - Get to Know Them",
+        objective="Ask at least two natural date-style questions about hobbies, daily life, or study.",
+        coach_tip="Sound curious and interested, like you want to know the other person better.",
         how_to_play=[
-            "Listen to the character's reply.",
+            "Listen to the character's reply like you are looking for a real connection.",
             "Ask one question with 'what', 'how', 'where', or 'why'.",
             "Ask a second question about hobbies, study, or daily life.",
-            "Keep both questions in natural spoken English.",
+            "Keep both questions natural and interested, not robotic.",
+            "Press Stop Practice after you finish both questions.",
         ],
         sample_answer=(
-            "What do you like to do after school? How do you usually practice English?"
+            "What do you like to do after school? How do you usually spend your weekends?"
         ),
         success_signals=[
             "You ask at least two real questions.",
-            "Your questions match the conversation topic.",
+            "Your questions help the date feel more personal.",
             "You use natural follow-up wording.",
         ],
         required_groups=[
             ["what", "how", "when", "where", "why"],
             ["do you", "are you", "can you", "would you"],
         ],
+        required_group_labels=[
+            "Use a real question word like what, how, where, or why.",
+            "Use full question form such as 'do you' or 'can you'.",
+        ],
         min_words=10,
         clear_score=70,
+        quick_win_tip=(
+            "Ask two full questions that show real interest in the other person. "
+            "Then press Stop Practice."
+        ),
         required_questions=2,
     ),
     Mission(
         id="plan",
-        title="Level 3 - Make a Plan",
-        objective="Suggest an activity and mention a time or day.",
-        coach_tip="Try a clear invitation like 'Let's ... tomorrow after class.'",
+        title="Day 3 - Ask for Another Date",
+        objective="Suggest a fun activity together and mention a time or day.",
+        coach_tip="Make it sound like a genuine invitation, not just a task prompt.",
         how_to_play=[
             "Respond to the character's mood or suggestion.",
             "Invite the character to do one activity together.",
             "Say when the activity can happen.",
-            "Keep the invitation friendly and specific.",
+            "Keep the invitation friendly, confident, and specific.",
+            "Press Stop Practice after one complete invitation.",
         ],
         sample_answer=(
-            "Let's get coffee tomorrow after class. We can practice English together at the cafe."
+            "Would you like to get coffee with me tomorrow after class? I think it would be fun to talk more at the cafe."
         ),
         success_signals=[
             "You invite the character to an activity.",
             "You mention a time or day.",
-            "Your plan sounds clear and natural.",
+            "Your invitation sounds clear and natural.",
         ],
         required_groups=[
             ["let's", "let us", "can we", "we should", "would you like to"],
             ["tomorrow", "tonight", "this weekend", "after class", "at", "on saturday", "on sunday"],
             ["cafe", "coffee", "movie", "walk", "study", "dessert", "music"],
         ],
+        required_group_labels=[
+            "Invite the character to do something together.",
+            "Say a time or day.",
+            "Mention a specific activity.",
+        ],
         min_words=12,
         clear_score=74,
+        quick_win_tip=(
+            "Say one clear invitation with an activity and a time, like asking for coffee tomorrow after class. "
+            "Then press Stop Practice."
+        ),
     ),
     Mission(
         id="resolve",
-        title="Final Level - Solve a Misunderstanding",
-        objective="Explain your opinion politely, give a reason, and suggest a compromise.",
-        coach_tip="Use 'I think...', 'because...', and 'can we...' in one answer.",
+        title="Final Day - Save the Mood",
+        objective="Handle a date misunderstanding politely, give a reason, and suggest a compromise.",
+        coach_tip="Protect the relationship energy: be gentle, explain yourself, and offer a warm solution.",
         how_to_play=[
-            "A small problem or misunderstanding appears in the roleplay.",
+            "A small misunderstanding appears in the date scene.",
             "Reply politely instead of arguing.",
             "Explain your reason with 'because'.",
-            "End with a compromise or solution.",
+            "End with a compromise or solution that keeps the connection alive.",
+            "Press Stop Practice after your full explanation.",
         ],
         sample_answer=(
-            "I think we had a misunderstanding because I was nervous. Can we talk again and choose a better plan together?"
+            "I think we had a misunderstanding because I was nervous. I'm sorry if I sounded awkward. Can we talk again and choose a better plan together?"
         ),
         success_signals=[
             "You sound polite and calm.",
@@ -149,65 +181,101 @@ MISSIONS: list[Mission] = [
             ["because", "so", "the reason is"],
             ["can we", "let's", "maybe we can", "instead", "together"],
         ],
+        required_group_labels=[
+            "Use a polite opinion or apology.",
+            "Give a reason.",
+            "Suggest a compromise or next step.",
+        ],
         min_words=16,
         clear_score=76,
+        quick_win_tip=(
+            "Say your opinion politely, explain the reason, and offer a warm solution in one answer. "
+            "Then press Stop Practice."
+        ),
     ),
 ]
 
 
-WORD_RE = re.compile(r"[a-zA-Z']+")
-SENTENCE_SPLIT_RE = re.compile(r"[.!?]+")
-SUBJECT_WORDS = {"i", "you", "we", "they", "he", "she"}
-VERB_WORDS = {
-    "am",
-    "is",
-    "are",
-    "was",
-    "were",
-    "be",
-    "like",
-    "love",
-    "enjoy",
-    "study",
-    "live",
-    "want",
-    "prefer",
-    "think",
-    "feel",
-    "go",
-    "can",
-    "would",
-    "will",
-    "plan",
-}
-FILLER_WORDS = {"um", "uh", "hmm", "er", "ah", "like"}
+SCORE_KEYS = (
+    "taskCompletion",
+    "fluency",
+    "vocabulary",
+    "grammar",
+    "confidence",
+)
+
+WORD_RE = re.compile(r"\b[\w']+\b", re.UNICODE)
+QUESTION_START_RE = re.compile(
+    r"(?:^|[.!]\s+)(what|how|when|where|why|do|are|can|would|will|did|is|am|could|should)\b",
+    re.IGNORECASE,
+)
 
 
 def _clip_score(value: float) -> int:
     return max(0, min(100, int(round(value))))
 
 
-def _tokenize(text: str) -> list[str]:
-    return WORD_RE.findall(text.lower())
+def _empty_breakdown() -> dict[str, int | None]:
+    return {key: None for key in SCORE_KEYS}
 
 
-def _normalize(text: str) -> str:
-    lowered = text.lower().strip()
-    return re.sub(r"\s+", " ", lowered)
+@dataclass(frozen=True)
+class MissionRequirementCheck:
+    passed: bool
+    unmet_requirements: list[str]
+    word_count: int
+    question_count: int
+
+
+def _normalize_transcript(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def _count_words(text: str) -> int:
+    return len(WORD_RE.findall(text))
 
 
 def _count_questions(text: str) -> int:
     question_marks = text.count("?")
-    starters = {"what", "how", "when", "where", "why", "do", "are", "can", "would"}
-    sentence_starts = 0
-    for chunk in SENTENCE_SPLIT_RE.split(text.lower()):
-        stripped = chunk.strip()
-        if not stripped:
-            continue
-        first_word_match = WORD_RE.search(stripped)
-        if first_word_match and first_word_match.group(0) in starters:
-            sentence_starts += 1
-    return max(question_marks, sentence_starts)
+    question_starts = len(QUESTION_START_RE.findall(text))
+    return max(question_marks, question_starts)
+
+
+def _check_mission_requirements(mission: Mission, transcript: str) -> MissionRequirementCheck:
+    normalized = _normalize_transcript(transcript)
+    word_count = _count_words(transcript)
+    question_count = _count_questions(normalized)
+    unmet_requirements: list[str] = []
+
+    for phrases, label in zip(mission.required_groups, mission.required_group_labels):
+        if not any(phrase in normalized for phrase in phrases):
+            unmet_requirements.append(label)
+
+    if mission.required_questions > 0 and question_count < mission.required_questions:
+        unmet_requirements.append(
+            f"Ask at least {mission.required_questions} full questions in this turn."
+        )
+
+    if word_count < mission.min_words:
+        unmet_requirements.append(
+            f"Use at least {mission.min_words} words in one complete answer."
+        )
+
+    return MissionRequirementCheck(
+        passed=len(unmet_requirements) == 0,
+        unmet_requirements=unmet_requirements,
+        word_count=word_count,
+        question_count=question_count,
+    )
+
+
+def _build_clear_checklist(mission: Mission) -> list[str]:
+    checklist = list(mission.success_signals)
+    if mission.required_questions > 0:
+        checklist.append(f"Ask at least {mission.required_questions} full questions.")
+    checklist.append(f"Use at least {mission.min_words} words in one answer.")
+    checklist.append("Press Stop Practice after your full answer to score the turn.")
+    return checklist
 
 
 @dataclass
@@ -216,19 +284,13 @@ class PracticeSession:
     target_language_code: str = "en-US"
     stage_index: int = 0
     turns_used: int = 0
-    overall_score: int = 0
+    overall_score: int | None = None
     status: str = "in_progress"
-    last_feedback: str = "Press Start, speak in English, and clear each mission before the challenge ends."
-    last_transcript: str = ""
-    last_breakdown: dict[str, int] = field(
-        default_factory=lambda: {
-            "taskCompletion": 0,
-            "fluency": 0,
-            "vocabulary": 0,
-            "grammar": 0,
-            "confidence": 0,
-        }
+    last_feedback: str = (
+        "Press Start Practice, stay in character, give one natural reply, then press Stop Practice to score the scene."
     )
+    last_transcript: str = ""
+    last_breakdown: dict[str, int | None] = field(default_factory=_empty_breakdown)
     agent_team: AgentTeamInsights = field(default_factory=AgentTeamInsights)
 
     @property
@@ -264,13 +326,15 @@ class PracticeSession:
         if mission is None:
             return "Game state: no mission is active."
 
-        character_mode = (
-            mission.title
-            if len(self.selected_characters) != 1
-            else f"{self.selected_characters[0].capitalize()} route - {mission.title}"
+        route_name = (
+            self.selected_characters[0].capitalize()
+            if self.selected_characters
+            else "Shizuku"
         )
+        character_mode = f"{route_name} route - {mission.title}"
         return (
             f"Current oral-practice stage: {character_mode}.\n"
+            "Mode: romantic date-style roleplay with light coaching.\n"
             f"Target learning language: {self.target_language.label} ({self.target_language.code}).\n"
             f"Objective: {mission.objective}\n"
             f"Coach tip: {mission.coach_tip}\n"
@@ -285,8 +349,8 @@ class PracticeSession:
             f"- Speak mainly in {self.target_language.label}.\n"
             "- Only switch away from the target learning language if the user explicitly asks.\n"
             "- Keep spoken replies short: usually 1-3 sentences.\n"
-            "- Stay playful and in character, but always act like an oral-English coach.\n"
-            "- After the user speaks, give one short natural response and one tiny coaching hint.\n"
+            "- Stay playful, emotionally warm, and in character like a dating-sim companion.\n"
+            "- After the user speaks, give one short natural reply and only a tiny coaching hint when needed.\n"
             "- Do not reveal hidden numeric scoring unless the user asks for it."
         )
 
@@ -317,6 +381,19 @@ class PracticeSession:
             error_message=error_message,
         )
 
+    def mark_scoring_unavailable(self, transcript: str) -> None:
+        cleaned = transcript.strip()
+        if not cleaned:
+            return
+
+        self.last_transcript = cleaned
+        self.overall_score = None
+        self.last_breakdown = _empty_breakdown()
+        self.last_feedback = (
+            "AI scoring is temporarily unavailable. This answer was not scored, "
+            "so your stage progress and turn count did not change."
+        )
+
     def record_user_turn(self, transcript: str, agent_analysis=None) -> None:
         if self.status != "in_progress":
             return
@@ -326,65 +403,25 @@ class PracticeSession:
             self.status = "won"
             return
 
-        normalized = _normalize(transcript)
-        tokens = _tokenize(transcript)
-        if not tokens:
+        cleaned = transcript.strip()
+        if not cleaned:
             return
 
+        if agent_analysis is None:
+            self.mark_scoring_unavailable(cleaned)
+            return
+
+        requirement_check = _check_mission_requirements(mission, cleaned)
         self.turns_used += 1
-        self.last_transcript = transcript.strip()
+        self.last_transcript = cleaned
 
-        word_count = len(tokens)
-        unique_count = len(set(tokens))
-        sentence_count = len([part for part in SENTENCE_SPLIT_RE.split(transcript) if part.strip()]) or 1
-        filler_count = sum(1 for token in tokens if token in FILLER_WORDS)
-        filler_ratio = filler_count / max(1, word_count)
-        question_count = _count_questions(transcript)
-
-        if agent_analysis is not None:
-            task_completion = _clip_score(agent_analysis.mission_coverage_score)
-            missing_groups = list(agent_analysis.missing_requirements)
-            mission_completed = bool(agent_analysis.mission_completed)
-        else:
-            matched_groups = 0
-            missing_groups: list[str] = []
-            for group in mission.required_groups:
-                matched = any(phrase in normalized for phrase in group)
-                if matched:
-                    matched_groups += 1
-                else:
-                    missing_groups.append(group[0])
-
-            task_completion = _clip_score(100 * matched_groups / len(mission.required_groups))
-            if mission.required_questions:
-                task_completion = _clip_score(
-                    (task_completion * 0.55)
-                    + (min(question_count, mission.required_questions) / mission.required_questions) * 45
-                )
-            mission_completed = (
-                matched_groups == len(mission.required_groups)
-                and question_count >= mission.required_questions
-            )
-
-        fluency = _clip_score(
-            30
-            + min(word_count, mission.min_words + 8) * 3
-            + min(sentence_count, 3) * 8
-            - max(0, filler_ratio - 0.12) * 100
-        )
-        vocabulary = _clip_score(25 + unique_count * 5)
-        grammar = _clip_score(
-            25
-            + min(sentence_count, 3) * 12
-            + min(word_count, mission.min_words + 4) * 1.8
-            + (12 if filler_ratio < 0.18 else 0)
-        )
-        confidence = _clip_score(
-            35
-            + (25 if word_count >= mission.min_words else word_count * 1.8)
-            + (20 if filler_ratio < 0.15 else 0)
-            + (20 if sentence_count >= 2 else 0)
-        )
+        task_completion = _clip_score(agent_analysis.mission_coverage_score)
+        fluency = _clip_score(agent_analysis.fluency_score)
+        vocabulary = _clip_score(agent_analysis.vocabulary_score)
+        grammar = _clip_score(agent_analysis.grammar_score)
+        confidence = _clip_score(agent_analysis.confidence_score)
+        missing_groups = list(agent_analysis.missing_requirements)
+        mission_completed = bool(agent_analysis.mission_completed)
         overall = _clip_score(
             task_completion * 0.38
             + fluency * 0.20
@@ -402,7 +439,15 @@ class PracticeSession:
         }
         self.overall_score = overall
 
-        cleared = mission_completed and overall >= mission.clear_score
+        unmet_requirements = list(requirement_check.unmet_requirements)
+        for item in missing_groups:
+            cleaned_item = str(item).strip()
+            if cleaned_item and cleaned_item not in unmet_requirements:
+                unmet_requirements.append(cleaned_item)
+
+        cleared = overall >= mission.clear_score and (
+            mission_completed or requirement_check.passed
+        )
 
         if cleared:
             self.stage_index += 1
@@ -419,24 +464,14 @@ class PracticeSession:
                     f"Next mission: {next_mission.objective}"
                 )
         else:
-            feedback_parts: list[str] = [f"Current score: {overall}/100."]
-            if word_count < mission.min_words:
+            feedback_parts: list[str] = [f"Current AI score: {overall}/100."]
+            if unmet_requirements:
                 feedback_parts.append(
-                    f"Speak a little longer: aim for at least {mission.min_words} words."
+                    "To clear this stage, still do: "
+                    + "; ".join(unmet_requirements[:3])
+                    + "."
                 )
-            if (
-                agent_analysis is None
-                and mission.required_questions
-                and question_count < mission.required_questions
-            ):
-                feedback_parts.append(
-                    f"Ask {mission.required_questions - question_count} more question(s)."
-                )
-            if missing_groups:
-                feedback_parts.append(
-                    "Still missing: " + ", ".join(f"'{phrase}'" for phrase in missing_groups[:2]) + "."
-                )
-            feedback_parts.append(mission.coach_tip)
+            feedback_parts.append(agent_analysis.coach_feedback or mission.coach_tip)
             self.last_feedback = " ".join(feedback_parts)
 
         if self.status == "in_progress" and self.turns_used >= TOTAL_ALLOWED_TURNS:
@@ -477,6 +512,8 @@ class PracticeSession:
                         language_code=self.target_language.code,
                     ),
                     "successSignals": mission.success_signals,
+                    "clearChecklist": _build_clear_checklist(mission),
+                    "quickWinTip": mission.quick_win_tip,
                     "passingScore": mission.clear_score,
                 }
                 if mission is not None

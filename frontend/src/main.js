@@ -143,9 +143,8 @@ class NativeSocketEmulator {
                 const encodedArn = encodeURIComponent(config.runtimeArn);
                 const host = `bedrock-agentcore.${config.region}.amazonaws.com`;
                 const path = `/runtimes/${encodedArn}/ws`;
-                const voiceId = getQueryParams().voice_id || 'tiffany';
-
                 const selectedCharacters = getSelectedCharacters();
+                const voiceId = getAssistantVoiceId(selectedCharacters);
                 const charactersParam = selectedCharacters.length > 0 ? selectedCharacters.join(',') : 'all';
 
                 const request = new HttpRequest({
@@ -321,12 +320,34 @@ const targetLanguageNoteElement = document.getElementById('target-language-note'
 const missionStepsElement = document.getElementById('mission-steps');
 const missionSampleElement = document.getElementById('mission-sample');
 const missionSuccessElement = document.getElementById('mission-success');
+const missionQuickWinElement = document.getElementById('mission-quick-win');
+const missionClearChecklistElement = document.getElementById('mission-clear-checklist');
 const agentTeamStatusElement = document.getElementById('agent-team-status');
 const agentCoachFeedbackElement = document.getElementById('agent-coach-feedback');
 const agentCoachExampleElement = document.getElementById('agent-coach-example');
 const agentJudgeSummaryElement = document.getElementById('agent-judge-summary');
 const agentDirectorBriefElement = document.getElementById('agent-director-brief');
 const agentDirectorGoalElement = document.getElementById('agent-director-goal');
+const SUPPORTED_ROUTE_VOICE_IDS = new Set([
+    'tiffany',
+    'matthew',
+    'amy',
+    'olivia',
+    'kiara',
+    'ambre',
+    'beatrice',
+    'tina',
+    'lupe',
+    'carolina'
+]);
+const DEFAULT_ROUTE_VOICE_IDS = {
+    shizuku: 'tiffany',
+    chitose: 'matthew'
+};
+
+function formatScoreValue(value) {
+    return typeof value === 'number' && Number.isFinite(value) ? String(value) : '--';
+}
 
 // Chat history management
 let chat = { history: [] };
@@ -420,10 +441,33 @@ function startSyncLoop() {
 function getSelectedCharacters() {
     const selected = Array.from(characterSelect.selectedOptions).map(opt => opt.value);
 
-    if (selected.length === 0 || selected.includes('all')) {
-        return ['shizuku', 'chitose'];
+    const normalized = selected.filter(val => ['shizuku', 'chitose'].includes(val));
+    if (normalized.length === 0) {
+        return ['shizuku'];
     }
-    return selected.filter(val => ['shizuku', 'chitose'].includes(val));
+    return [normalized[0]];
+}
+
+function getDefaultAssistantVoiceId(selectedCharacters = getSelectedCharacters()) {
+    if (selectedCharacters.length === 1) {
+        return DEFAULT_ROUTE_VOICE_IDS[selectedCharacters[0]] || 'tiffany';
+    }
+    return DEFAULT_ROUTE_VOICE_IDS.shizuku;
+}
+
+function getAssistantVoiceId(selectedCharacters = getSelectedCharacters()) {
+    const requestedVoiceId = (getQueryParams().voice_id || '').trim().toLowerCase();
+    if (requestedVoiceId && SUPPORTED_ROUTE_VOICE_IDS.has(requestedVoiceId)) {
+        return requestedVoiceId;
+    }
+    return getDefaultAssistantVoiceId(selectedCharacters);
+}
+
+function formatVoiceLabel(voiceId) {
+    if (!voiceId) {
+        return 'Tiffany';
+    }
+    return voiceId.charAt(0).toUpperCase() + voiceId.slice(1);
 }
 
 function renderGameState(state) {
@@ -440,7 +484,7 @@ function renderGameState(state) {
     }
 
     if (overallScoreElement) {
-        overallScoreElement.textContent = String(state.overallScore ?? 0);
+        overallScoreElement.textContent = formatScoreValue(state.overallScore);
     }
 
     if (missionTitleElement) {
@@ -471,6 +515,12 @@ function renderGameState(state) {
             state.currentMission?.sampleAnswer || 'Follow the mission prompt with a short spoken answer.';
     }
 
+    if (missionQuickWinElement) {
+        missionQuickWinElement.textContent =
+            state.currentMission?.quickWinTip
+            || 'Say one full answer that covers the mission objective, then press Stop Practice to score the turn.';
+    }
+
     if (missionSuccessElement) {
         const signals = state.currentMission?.successSignals || [];
         missionSuccessElement.innerHTML = '';
@@ -479,6 +529,40 @@ function renderGameState(state) {
             item.textContent = signal;
             missionSuccessElement.appendChild(item);
         });
+    }
+
+    if (missionClearChecklistElement) {
+        const checklist = state.currentMission?.clearChecklist || [];
+        missionClearChecklistElement.innerHTML = '';
+        checklist.forEach((entry) => {
+            const item = document.createElement('li');
+            item.textContent = entry;
+            missionClearChecklistElement.appendChild(item);
+        });
+    }
+
+    const targetLanguage = state.targetLanguage || {};
+    const supportedLanguages = state.supportedLanguages || [];
+    if (targetLanguageSelect) {
+        if (supportedLanguages.length > 0 && targetLanguageSelect.options.length !== supportedLanguages.length) {
+            targetLanguageSelect.innerHTML = '';
+            supportedLanguages.forEach((language) => {
+                const option = document.createElement('option');
+                option.value = language.code;
+                option.textContent = language.label;
+                targetLanguageSelect.appendChild(option);
+            });
+        }
+        if (targetLanguage.code) {
+            targetLanguageSelect.value = targetLanguage.code;
+        }
+    }
+    if (targetLanguageNoteElement) {
+        const recommendedVoice = formatVoiceLabel(targetLanguage.recommendedVoice || 'tiffany');
+        const activeVoice = formatVoiceLabel(getAssistantVoiceId());
+        targetLanguageNoteElement.textContent = recommendedVoice === activeVoice
+            ? `Recommended Nova Sonic voice: ${recommendedVoice}.`
+            : `Recommended Nova Sonic voice: ${recommendedVoice}. Current route voice: ${activeVoice}.`;
     }
 
     const agentTeam = state.agentTeam || {};
@@ -491,7 +575,7 @@ function renderGameState(state) {
             agentTeamStatusElement.classList.add('is-error');
             agentTeamStatusElement.textContent = `Multi-agent team error: ${agentTeam.error_message || 'unknown error'}`;
         } else {
-            agentTeamStatusElement.textContent = 'Waiting for the first scored turn...';
+            agentTeamStatusElement.textContent = 'Waiting for the first AI-scored turn...';
         }
     }
 
@@ -522,7 +606,7 @@ function renderGameState(state) {
     ['taskCompletion', 'fluency', 'vocabulary', 'grammar', 'confidence'].forEach((key) => {
         const node = document.getElementById(`score-${key}`);
         if (node) {
-            node.textContent = String(breakdown[key] ?? 0);
+            node.textContent = formatScoreValue(breakdown[key]);
         }
     });
 
@@ -536,9 +620,10 @@ function renderGameState(state) {
             gameBannerElement.textContent = 'Challenge failed. Restart and clear all speaking missions next time.';
         } else {
             const passingScore = state.currentMission?.passingScore;
+            const quickWinTip = state.currentMission?.quickWinTip;
             gameBannerElement.textContent = passingScore
-                ? `Pass score: ${passingScore}. Speak in ${targetLanguage.label || 'the target language'} and finish the mission objective.`
-                : 'Speak in the target language to clear the current mission.';
+                ? `Pass score: ${passingScore}. ${quickWinTip || 'Finish the mission objective and press Stop Practice to score the turn.'}`
+                : 'Finish the mission objective, then press Stop Practice to score the turn.';
         }
     }
 
@@ -563,28 +648,40 @@ function applyCharacterSelection(values) {
         option.selected = false;
     });
 
-    if (normalized.length !== 1) {
-        const allOption = characterSelect.querySelector('option[value="all"]');
-        if (allOption) allOption.selected = true;
-    } else {
-        const match = characterSelect.querySelector(`option[value="${normalized[0]}"]`);
-        if (match) match.selected = true;
-    }
+    const nextValue = normalized[0] || 'shizuku';
+    const match = characterSelect.querySelector(`option[value="${nextValue}"]`);
+    if (match) match.selected = true;
 
     characterSelect.dispatchEvent(new Event('change'));
 }
 
 function getAssistantSpeakerName() {
+    return getSelectedCharacters()[0].toUpperCase();
+}
+
+function syncCharacterVisibility() {
+    const charLeft = document.getElementById('char-left');
+    const charRight = document.getElementById('char-right');
     const selectedCharacters = getSelectedCharacters();
-    if (selectedCharacters.length === 1) {
-        return selectedCharacters[0].toUpperCase();
+    const isChitoseRoute = selectedCharacters[0] === 'chitose';
+
+    if (!charLeft || !charRight) {
+        return;
     }
 
-    return 'SHIZUKU & CHITOSE';
+    charLeft.classList.toggle('is-hidden', isChitoseRoute);
+    charRight.classList.toggle('is-hidden', !isChitoseRoute);
+
+    if (isChitoseRoute) {
+        charLeft.classList.remove('active');
+    } else {
+        charRight.classList.remove('active');
+    }
 }
 
 characterSelect.addEventListener('change', () => {
     console.log(`Selected characters updated: ${getSelectedCharacters().join(', ')}`);
+    syncCharacterVisibility();
 });
 
 targetLanguageSelect?.addEventListener('change', () => {
@@ -1129,7 +1226,7 @@ function updateRpgSpeaker(role, text) {
     }
 
     if (role === 'ASSISTANT') {
-        if (selectedCharacters.length === 1 && selectedCharacters[0] === 'chitose') {
+        if (selectedCharacters[0] === 'chitose') {
             charLeft.classList.remove('active');
             charRight.classList.add('active');
         } else {
@@ -1142,7 +1239,7 @@ function updateRpgSpeaker(role, text) {
     }
 
     const rpgDialogueText = document.getElementById('dialogue-text');
-    if (rpgDialogueText && role === 'USER') {
+    if (rpgDialogueText && text) {
         rpgDialogueText.textContent = text;
     }
 }
@@ -1200,6 +1297,11 @@ socket.on('contentEnd', (data) => {
             // When assistant's text content ends, prepare for user input in next turn
             hideAssistantThinkingIndicator();
             assistantTurnEnded = true;
+            updateRpgSpeaker('ASSISTANT', currentFullText);
+            if (totalSamplesReceived === 0 && currentFullText) {
+                chatHistoryManager.updateTypewriterMessage(currentFullText);
+                chatHistoryManager.finalizeTypewriterMessage();
+            }
         }
 
         // Handle stop reasons
@@ -1301,14 +1403,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         stageIndex: 1,
         totalStages: 4,
         turnsRemaining: 16,
-        overallScore: 0,
-        lastFeedback: 'Press Start, speak in English, and clear each mission before the challenge ends.',
+        overallScore: null,
+        lastFeedback: 'Press Start Practice, stay in character, give one natural reply, then press Stop Practice to score the scene.',
         lastBreakdown: {
-            taskCompletion: 0,
-            fluency: 0,
-            vocabulary: 0,
-            grammar: 0,
-            confidence: 0
+            taskCompletion: null,
+            fluency: null,
+            vocabulary: null,
+            grammar: null,
+            confidence: null
         },
         agentTeam: {
             status: 'pending',
@@ -1339,19 +1441,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             { code: 'hi-IN', label: 'Hindi', recommendedVoice: 'tiffany' }
         ],
         currentMission: {
-            title: 'Level 1 - Introduce Yourself',
-            objective: 'Say your name, where you are from or study, and one hobby.',
+            title: 'Day 1 - First Meeting',
+            objective: 'Introduce yourself naturally on a first date: say your name, where you are from or study, and one hobby.',
             howToPlay: [
-                'Press Start Practice.',
-                'Listen to the character greeting.',
-                'Say your name, school or city, and one hobby.',
-                'Use full English sentences.'
+                'Press Start Practice and listen to the greeting like you are meeting someone cute for the first time.',
+                'Say your name in one full sentence.',
+                'Add where you study or where you are from.',
+                'Finish with one hobby that makes you sound interesting.',
+                'Press Stop Practice after your full answer to score this turn.'
             ],
-            sampleAnswer: 'Hi, my name is Cyrus. I study at VTC in Hong Kong, and I enjoy listening to music after class.',
+            sampleAnswer: 'Hi, my name is Cyrus. I study at HKIIT in Hong Kong, and I enjoy listening to music after class. It helps me relax.',
+            quickWinTip: 'Say your name, where you study or live, and one hobby in one natural first-date answer. Then press Stop Practice to score the turn.',
             successSignals: [
-                'Mention your name.',
+                'You introduce yourself naturally.',
+                'You mention your school, city, or background.',
+                'You mention one hobby or interest.'
+            ],
+            clearChecklist: [
+                'Introduce yourself naturally.',
                 'Mention your school or background.',
-                'Mention one hobby.'
+                'Mention one hobby or interest.',
+                'Use at least 12 words in one answer.',
+                'Press Stop Practice after your full answer.'
             ],
             passingScore: 72
         }
@@ -1373,25 +1484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             startStreaming();
         }, 3000);
     }
+    else {
+        applyCharacterSelection(['shizuku']);
+    }
 });
-    const targetLanguage = state.targetLanguage || {};
-    const supportedLanguages = state.supportedLanguages || [];
-    if (targetLanguageSelect) {
-        if (supportedLanguages.length > 0 && targetLanguageSelect.options.length !== supportedLanguages.length) {
-            targetLanguageSelect.innerHTML = '';
-            supportedLanguages.forEach((language) => {
-                const option = document.createElement('option');
-                option.value = language.code;
-                option.textContent = language.label;
-                targetLanguageSelect.appendChild(option);
-            });
-        }
-        if (targetLanguage.code) {
-            targetLanguageSelect.value = targetLanguage.code;
-        }
-    }
-    if (targetLanguageNoteElement) {
-        targetLanguageNoteElement.textContent = targetLanguage.recommendedVoice
-            ? `Recommended Nova Sonic voice: ${targetLanguage.recommendedVoice}.`
-            : 'Recommended Nova Sonic voice: Tiffany.';
-    }
