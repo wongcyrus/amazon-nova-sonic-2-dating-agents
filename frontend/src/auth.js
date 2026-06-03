@@ -3,6 +3,24 @@
 // Global config reference
 let config = null;
 
+function resolveRuntimeEndpointArn(config) {
+    const runtimeEndpointArn = String(config.runtimeEndpointArn || '').trim();
+    if (runtimeEndpointArn) {
+        return runtimeEndpointArn;
+    }
+
+    const runtimeArn = String(config.runtimeArn || '').trim();
+    if (!runtimeArn) {
+        return '';
+    }
+
+    if (runtimeArn.includes('/runtime-endpoint/')) {
+        return runtimeArn;
+    }
+
+    return `${runtimeArn}/runtime-endpoint/DEFAULT`;
+}
+
 async function loadConfig() {
     if (config) return config;
     try {
@@ -14,7 +32,7 @@ async function loadConfig() {
         localStorage.setItem('cognitoUserPoolId', config.userPoolId);
         localStorage.setItem('cognitoClientId', config.clientId);
         localStorage.setItem('cognitoIdentityPoolId', config.identityPoolId);
-        localStorage.setItem('agentCoreRuntimeArn', config.runtimeArn);
+        localStorage.setItem('agentCoreRuntimeArn', resolveRuntimeEndpointArn(config));
         return config;
     } catch (err) {
         console.error('Error loading configuration:', err);

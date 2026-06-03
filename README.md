@@ -70,7 +70,7 @@ Based on the current AWS Nova Sonic 2 docs, the supported spoken languages in th
 | Spanish (US) | `es-US` | |
 | Portuguese (Brazil) | `pt-BR` | |
 
-For best multilingual behavior, the game currently recommends the **Tiffany** voice because AWS documents Tiffany and Matthew as polyglot voices across supported Nova Sonic languages. The app now uses route-based defaults: **Shizuku** uses `tiffany`, **Chitose** uses `matthew`, and Shizuku is the default route unless `voice_id` is set to another supported route voice.
+For best multilingual behavior, the UI still recommends **Tiffany** for every supported target language because `language_support.py` currently returns `tiffany` as the recommended voice across the board. The actual route defaults are separate: **Shizuku** uses `tiffany`, **Chitose** uses `matthew`, and Shizuku is the default route unless `voice_id` is set to another supported route voice.
 
 ### The 4 Missions
 | Stage | Goal | What to say |
@@ -92,7 +92,7 @@ Use this as a beginner script when you first try the game:
 
 The deployment now follows a split-runtime layout that is closer to AWS best practice for mixed-latency workloads:
 
-1. **Visible Realtime Voice Agent** — the BidiAgent that speaks as Shizuku/Chitose
+1. **Visible Realtime Voice Agent** — the BidiAgent that speaks as the currently selected route character
 2. **Realtime AgentCore Runtime** — hosts the websocket voice session and game-state loop
 3. **Turn Analysis AgentCore Runtime** — isolates the slower Director/Judge/Coach scoring call
 4. **Coach Agent** — gives short learning advice and a model line
@@ -130,7 +130,7 @@ The system intentionally separates **realtime speaking** from **turn analysis**:
 | Frontend Voice Game UI | Captures microphone audio, shows mission guide, score, and coach feedback |
 | Realtime AgentCore Runtime | Hosts the realtime session securely with WebSocket streaming |
 | Turn Analysis AgentCore Runtime | Runs Director/Judge/Coach scoring behind the voice runtime |
-| Strands Bidi Voice Agent | Talks as Shizuku/Chitose and keeps the conversation immersive |
+| Strands Bidi Voice Agent | Talks as the selected route character and keeps the conversation immersive |
 | Coach Agent | Produces short improvement advice and one model sentence |
 | Judge Agent | Evaluates whether the learner covered the mission objective |
 | Director Agent | Orchestrates the coach and judge, then sets the next scene beat and assistant goal |
@@ -407,7 +407,7 @@ sequenceDiagram
    python backend/dating_voice_agent.py
    ```
 4. Local development keeps turn analysis in-process unless you set `TURN_ANALYSIS_RUNTIME_ARN`, so you can still run the app with a single local Python process.
-5. Open `frontend/index.html` in your browser (use a local web server like Live Server).
+5. Open `http://localhost:8080/` in your browser. The FastAPI app serves the frontend assets, `/login.html`, and the websocket endpoint from the same local process.
 
 ## License
 MIT

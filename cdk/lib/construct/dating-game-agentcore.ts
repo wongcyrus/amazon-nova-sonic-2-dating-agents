@@ -8,7 +8,7 @@ import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as path from "path";
 import { Platform } from "aws-cdk-lib/aws-ecr-assets";
 import { DatabaseConstruct } from "./datebase";
-import { Stack, RemovalPolicy } from "aws-cdk-lib";
+import { Duration, Stack, RemovalPolicy } from "aws-cdk-lib";
 
 export interface DatingGameAgentcoreConstructProps {
   readonly database: DatabaseConstruct;
@@ -34,6 +34,14 @@ export class DatingGameAgentcoreConstruct extends Construct {
       platform: Platform.LINUX_ARM64,
       exclude: [".venv", "__pycache__", "tests", "cdk"],
     };
+    const realtimeRuntimeLifecycleConfiguration = {
+      idleRuntimeSessionTimeout: Duration.minutes(10),
+      maxLifetime: Duration.minutes(30),
+    };
+    const analysisRuntimeLifecycleConfiguration = {
+      idleRuntimeSessionTimeout: Duration.minutes(5),
+      maxLifetime: Duration.minutes(10),
+    };
 
     // 1. Package dedicated runtime images so the latency-sensitive voice path
     // and the slower multi-agent scoring path can scale independently.
@@ -57,6 +65,7 @@ export class DatingGameAgentcoreConstruct extends Construct {
       runtimeName: "dating_game_turn_analysis",
       agentRuntimeArtifact: analysisRuntimeArtifact,
       authorizerConfiguration: agentcore.RuntimeAuthorizerConfiguration.usingIAM(),
+      lifecycleConfiguration: analysisRuntimeLifecycleConfiguration,
       environmentVariables: {
         IsInCloud: "yes",
         AWS_BEDROCK_REGION: "us-east-1",
@@ -71,6 +80,7 @@ export class DatingGameAgentcoreConstruct extends Construct {
       runtimeName: "dating_game_agentcore",
       agentRuntimeArtifact: realtimeRuntimeArtifact,
       authorizerConfiguration: agentcore.RuntimeAuthorizerConfiguration.usingIAM(),
+      lifecycleConfiguration: realtimeRuntimeLifecycleConfiguration,
       environmentVariables: {
         IsInCloud: "yes",
         AWS_BEDROCK_REGION: "us-east-1",
@@ -79,7 +89,7 @@ export class DatingGameAgentcoreConstruct extends Construct {
         TURN_ANALYSIS_RUNTIME_ARN: analysisRuntime.agentRuntimeArn,
       },
     });
-
+    this.runtimeArn = realtimeRuntime.agentRuntimeArn;
     this.runtimeArn = realtimeRuntime.agentRuntimeArn;
 
     // 4. Grant the realtime runtime access to game state storage.

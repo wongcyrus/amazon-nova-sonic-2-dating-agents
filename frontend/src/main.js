@@ -9,12 +9,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Connect to the serverless AWS Bedrock AgentCore with authentication via SigV4 signed WebSocket
+const HIDDEN_SOCKET_CLOSE_DELAY_MS = 60 * 1000;
+const SOCKET_INACTIVITY_CLOSE_DELAY_MS = 5 * 60 * 1000;
+
 class NativeSocketEmulator {
     constructor() {
         this.listeners = {};
         this.connected = false;
         this.ws = null;
         this.connectPromise = null;
+        this.hiddenCloseTimeoutId = null;
+        this.inactivityTimeoutId = null;
+
+        this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
+        this.handlePageHide = this.handlePageHide.bind(this);
+        this.handleBeforeUnload = this.handleBeforeUnload.bind(this);
+
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+        window.addEventListener('pagehide', this.handlePageHide);
+        window.addEventListener('beforeunload', this.handleBeforeUnload);
         
         // Auto-connect in background on load
         this.connect().catch(err => {
@@ -24,6 +37,7 @@ class NativeSocketEmulator {
     
     async connect() {
         if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.resetInactivityTimer();
             return;
         }
         
@@ -45,6 +59,8 @@ class NativeSocketEmulator {
             }
             this.ws = null;
         }
+        this.clearHiddenCloseTimeout();
+        this.clearInactivityTimer();
         
         this.connectPromise = new Promise(async (resolve, reject) => {
             const timeoutDuration = 12000; // 12 second global timeout for establishing connection
@@ -178,6 +194,10 @@ class NativeSocketEmulator {
                     console.log("WebSocket connection established!");
                     clearTimeout(timeoutId);
                     this.connected = true;
+                    this.resetInactivityTimer();
+                    if (document.visibilityState === 'hidden') {
+                        this.scheduleHiddenClose();
+                    }
                     this.trigger('connect');
                     if (!isConnectionSettled) {
                         isConnectionSettled = true;
@@ -189,8 +209,11 @@ class NativeSocketEmulator {
                     console.log(`WebSocket connection closed: code=${event.code}, reason=${event.reason}`);
                     clearTimeout(timeoutId);
                     this.connected = false;
+                    this.clearHiddenCloseTimeout();
+                    this.clearInactivityTimer();
                     this.trigger('disconnect');
                     this.connectPromise = null;
+                    this.ws = null;
                     if (!isConnectionSettled) {
                         isConnectionSettled = true;
                         reject(new Error(`WebSocket connection closed: code=${event.code}`));
@@ -201,6 +224,8 @@ class NativeSocketEmulator {
                     console.error("WebSocket transport error:", error);
                     clearTimeout(timeoutId);
                     this.connected = false;
+                    this.clearHiddenCloseTimeout();
+                    this.clearInactivityTimer();
                     this.trigger('error', error);
                     this.connectPromise = null;
                     if (!isConnectionSettled) {
@@ -211,6 +236,7 @@ class NativeSocketEmulator {
                 
                 ws.onmessage = (event) => {
                     try {
+                        this.resetInactivityTimer();
                         console.log("📥 Raw WebSocket Message from Bedrock AgentCore:", event.data);
                         const payload = JSON.parse(event.data);
                         if (payload.type) {
@@ -283,7 +309,95 @@ class NativeSocketEmulator {
             };
         }
         
+        this.resetInactivityTimer();
         this.ws.send(JSON.stringify(payload));
+    }
+
+    disconnect(reason = 'client shutdown') {
+        this.clearHiddenCloseTimeout();
+        this.clearInactivityTimer();
+
+        if (!this.ws) {
+            this.connected = false;
+            this.connectPromise = null;
+            return;
+        }
+
+        if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+            try {
+                this.ws.close(1000, reason.slice(0, 120));
+            } catch (e) {
+                console.warn("Error closing WebSocket connection:", e);
+            }
+            return;
+        }
+
+        this.ws = null;
+        this.connected = false;
+        this.connectPromise = null;
+    }
+
+    handleVisibilityChange() {
+        if (document.visibilityState === 'hidden') {
+            this.scheduleHiddenClose();
+            return;
+        }
+
+        this.clearHiddenCloseTimeout();
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.resetInactivityTimer();
+        }
+    }
+
+    handlePageHide() {
+        this.disconnect('page hidden');
+    }
+
+    handleBeforeUnload() {
+        this.disconnect('page unloading');
+    }
+
+    scheduleHiddenClose() {
+        this.clearHiddenCloseTimeout();
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        this.hiddenCloseTimeoutId = window.setTimeout(() => {
+            console.log("Closing WebSocket after tab stayed hidden.");
+            this.disconnect('tab hidden');
+        }, HIDDEN_SOCKET_CLOSE_DELAY_MS);
+    }
+
+    clearHiddenCloseTimeout() {
+        if (this.hiddenCloseTimeoutId) {
+            window.clearTimeout(this.hiddenCloseTimeoutId);
+            this.hiddenCloseTimeoutId = null;
+        }
+    }
+
+    resetInactivityTimer() {
+        this.clearInactivityTimer();
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        this.inactivityTimeoutId = window.setTimeout(() => {
+            if (isStreaming) {
+                this.resetInactivityTimer();
+                return;
+            }
+
+            console.log("Closing idle WebSocket after inactivity.");
+            this.disconnect('inactive session');
+        }, SOCKET_INACTIVITY_CLOSE_DELAY_MS);
+    }
+
+    clearInactivityTimer() {
+        if (this.inactivityTimeoutId) {
+            window.clearTimeout(this.inactivityTimeoutId);
+            this.inactivityTimeoutId = null;
+        }
     }
     
     trigger(event, data) {
