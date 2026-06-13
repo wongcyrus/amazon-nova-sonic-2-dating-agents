@@ -21,6 +21,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger("turn_analysis_runtime")
 
+class EndpointFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            msg = record.getMessage()
+            if "GET /ping " in msg or "GET / " in msg:
+                return False
+        except Exception:
+            pass
+        return True
+
+logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
+
 
 class TurnAnalysisRequest(BaseModel):
     model_id: str
@@ -42,9 +54,9 @@ class TurnAnalysisRequest(BaseModel):
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    logger.info("Turn analysis AgentCore runtime starting up...")
+    logger.debug("Turn analysis AgentCore runtime starting up...")
     yield
-    logger.info("Turn analysis AgentCore runtime shutting down...")
+    logger.debug("Turn analysis AgentCore runtime shutting down...")
 
 
 app = FastAPI(
@@ -89,11 +101,11 @@ async def analyze_turn_endpoint(payload: TurnAnalysisRequest):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     host = os.environ.get("HOST", "0.0.0.0")
-    logger.info("Starting turn analysis runtime on %s:%s", host, port)
+    logger.debug("Starting turn analysis runtime on %s:%s", host, port)
     uvicorn.run(
         app,
         host=host,
         port=port,
-        log_level="info",
+        log_level="warning",
         access_log=True,
     )

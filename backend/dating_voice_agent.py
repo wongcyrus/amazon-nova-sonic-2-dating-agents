@@ -36,10 +36,12 @@ logger = logging.getLogger("dating_voice_agent")
 
 class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        if record.args and len(record.args) >= 3:
-            path = record.args[2]
-            if path == "/ping" or path == "/":
+        try:
+            msg = record.getMessage()
+            if "GET /ping " in msg or "GET / " in msg:
                 return False
+        except Exception:
+            pass
         return True
 
 
@@ -235,14 +237,14 @@ def run_turn_analysis(
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    logger.info("Dating Game AgentCore service starting up...")
-    logger.info(
+    logger.debug("Dating Game AgentCore service starting up...")
+    logger.debug(
         "Turn analysis mode: %s",
         "remote-runtime" if TURN_ANALYSIS_RUNTIME_ARN else "local-process",
     )
     logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
     yield
-    logger.info("Dating Game AgentCore service shutting down...")
+    logger.debug("Dating Game AgentCore service shutting down...")
 
 
 app = FastAPI(
@@ -494,7 +496,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if not event_type:
                     continue
 
-                logger.info("Inbound client event: %s", event_type)
+                logger.debug("Inbound client event: %s", event_type)
 
                 if event_type == "character":
                     selected_characters = normalize_characters(
@@ -544,7 +546,7 @@ async def websocket_endpoint(websocket: WebSocket):
         async def output_adapter(event):
             nonlocal current_user_transcript, pending_user_turn
             event_type = type(event).__name__
-            logger.info("Outbound agent event: %s", event_type)
+            logger.debug("Outbound agent event: %s", event_type)
 
             if event_type == "BidiTranscriptStreamEvent":
                 text = getattr(event, "text", "")
@@ -638,11 +640,11 @@ async def websocket_endpoint(websocket: WebSocket):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     host = os.environ.get("HOST", "0.0.0.0")
-    logger.info("Starting FastAPI Dating Game service on %s:%s", host, port)
+    logger.debug("Starting FastAPI Dating Game service on %s:%s", host, port)
     uvicorn.run(
         app,
         host=host,
         port=port,
-        log_level="info",
+        log_level="warning",
         access_log=True,
     )
