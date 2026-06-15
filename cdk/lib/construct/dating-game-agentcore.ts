@@ -184,7 +184,6 @@ export class DatingGameAgentcoreConstruct extends Construct {
 
     this.serviceUrl = distribution.distributionDomainName;
 
-    // 10. Deploy static web files and dynamic config.json to website bucket
     new s3deploy.BucketDeployment(this, "DeployDatingGameWebsiteAndConfig", {
       sources: [
         s3deploy.Source.asset(path.join(__dirname, "../../../frontend")),
@@ -199,6 +198,7 @@ export class DatingGameAgentcoreConstruct extends Construct {
       destinationBucket: websiteBucket,
       distribution,
       distributionPaths: ["/*"],
+      waitForDistributionInvalidation: false,
     });
   }
 }
